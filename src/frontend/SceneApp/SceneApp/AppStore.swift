@@ -447,20 +447,30 @@ final class AppStore {
     }
 
     /// Approve or dismiss. Nothing is sent anywhere without this tap.
-    func updateFollowUp(id: String, draft: String, approve: Bool) async {
-        guard let i = followups.firstIndex(where: { $0.id == id }) else { return }
+    /// On approve the backend returns the full follow-up, including action_url
+    /// (a mailto: draft or a calendar form). The caller opens it; the user still
+    /// presses Send / Save there. Returns that URL, or nil.
+    @discardableResult
+    func updateFollowUp(id: String, draft: String, approve: Bool) async -> URL? {
+        guard let i = followups.firstIndex(where: { $0.id == id }) else { return nil }
         followups[i].draft = draft
         if !useMock {
             do {
-                try await send("/api/v1/followups/\(id)/\(approve ? "approve" : "dismiss")", body: [:])
+                let data = try await send("/api/v1/followups/\(id)/\(approve ? "approve" : "dismiss")",
+                                          body: approve ? ["draft": draft] : [:])
+                if approve, let updated = try? JSONCoding.decoder.decode(FollowUp.self, from: data),
+                   let j = followups.firstIndex(where: { $0.id == id }) {
+                    followups[j] = updated
+                }
             } catch {
                 followupError = error.localizedDescription
-                return
+                return nil
             }
         }
-        if let j = followups.firstIndex(where: { $0.id == id }) {
-            followups[j].status = approve ? "approved" : "dismissed"
-        }
+        guard let j = followups.firstIndex(where: { $0.id == id }) else { return nil }
+        followups[j].status = approve ? "approved" : "dismissed"
+        if approve, let link = followups[j].actionUrl { return URL(string: link) }
+        return nil
     }
 
     // MARK: Networking
