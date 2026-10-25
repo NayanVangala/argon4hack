@@ -15,6 +15,23 @@ nonisolated struct FollowUp: Identifiable, Codable, Hashable {
     var draft: String
     var status: String          // pending | approved | dismissed | sent | needs_review
     var sceneId: String?
+    // Real backend extras (optional, so the mock server still decodes)
+    var actionType: String? = nil       // email | reply | calendar | todo
+    var recipient: String? = nil
+    var dueAt: String? = nil
+    var actionUrl: String? = nil        // mailto: or calendar link, returned on approve
+    var webActionUrl: String? = nil     // Gmail web compose fallback
+    var executionStatus: String? = nil
+
+    var actionLabel: String? {
+        switch actionType {
+        case "email": return "EMAIL"
+        case "reply": return "REPLY"
+        case "calendar": return "CALENDAR EVENT"
+        case "todo": return "TO-DO"
+        default: return nil
+        }
+    }
 }
 
 nonisolated struct FollowUpRun: Codable {
@@ -253,7 +270,7 @@ struct FollowUpDetailView: View {
 
         return ScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                Text("FOLLOW-UP TO \(f.person.uppercased())")
+                Text("\(f.actionLabel ?? "FOLLOW-UP") · \(f.person.uppercased())")
                     .font(.system(size: 13, weight: .bold))
                     .foregroundStyle(Theme.secondary)
                 Text(f.promise)
@@ -320,13 +337,31 @@ struct FollowUpDetailView: View {
                             .foregroundStyle(Theme.ink)
                             .frame(maxWidth: .infinity, minHeight: 52)
                             .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.tint))
-                        ShareLink(item: draft) {
-                            Label("Send…", systemImage: "square.and.arrow.up")
-                                .font(Theme.title(17))
-                                .foregroundStyle(Theme.paper)
-                                .frame(maxWidth: .infinity, minHeight: 52)
-                                .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.ink))
+                        if let link = f.actionUrl.flatMap({ URL(string: $0) }) {
+                            // The backend prepared it; you still press Send / Save yourself
+                            Link(destination: link) {
+                                Label(f.actionType == "calendar" ? "Open calendar" : "Open email",
+                                      systemImage: f.actionType == "calendar" ? "calendar" : "envelope")
+                                    .font(Theme.title(17))
+                                    .foregroundStyle(Theme.paper)
+                                    .frame(maxWidth: .infinity, minHeight: 52)
+                                    .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.ink))
+                            }
+                        } else if f.executionStatus != "added_to_todo_list" {
+                            ShareLink(item: draft) {
+                                Label("Send…", systemImage: "square.and.arrow.up")
+                                    .font(Theme.title(17))
+                                    .foregroundStyle(Theme.paper)
+                                    .frame(maxWidth: .infinity, minHeight: 52)
+                                    .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.ink))
+                            }
                         }
+                    }
+                    if f.executionStatus == "added_to_todo_list" {
+                        Text("ADDED TO YOUR TO-DO LIST").font(Theme.mono(12)).foregroundStyle(Theme.secondary)
+                    } else if f.actionUrl != nil {
+                        Text("NOTHING IS SENT UNTIL YOU PRESS SEND IN YOUR EMAIL OR CALENDAR APP")
+                            .font(Theme.mono(11)).foregroundStyle(Theme.secondary)
                     }
                 } else {
                     Text("DISMISSED").font(Theme.mono(13)).foregroundStyle(Theme.secondary)

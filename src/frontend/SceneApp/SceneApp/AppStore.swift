@@ -450,15 +450,21 @@ final class AppStore {
     func updateFollowUp(id: String, draft: String, approve: Bool) async {
         guard let i = followups.firstIndex(where: { $0.id == id }) else { return }
         followups[i].draft = draft
+        var updated: FollowUp? = nil
         if !useMock {
             do {
-                try await send("/api/v1/followups/\(id)/\(approve ? "approve" : "dismiss")", body: [:])
+                // Your edits to the draft go with the approval
+                let data = try await send("/api/v1/followups/\(id)/\(approve ? "approve" : "dismiss")",
+                                          body: approve && !draft.isEmpty ? ["draft": draft] : [:])
+                // Real backend returns the full follow-up with its email / calendar link
+                updated = try? JSONCoding.decoder.decode(FollowUp.self, from: data)
             } catch {
                 followupError = error.localizedDescription
                 return
             }
         }
         if let j = followups.firstIndex(where: { $0.id == id }) {
+            if let updated { followups[j] = updated }
             followups[j].status = approve ? "approved" : "dismissed"
         }
     }
