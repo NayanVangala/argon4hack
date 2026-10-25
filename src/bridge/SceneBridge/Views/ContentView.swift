@@ -49,7 +49,6 @@ struct ContentView: View {
                         Button {
                             selectedDevice = device
                             showStream = true
-                            wearables.startDeviceSession()
                         } label: {
                             VStack(alignment: .leading) {
                                 Text(device.nameOrId()).font(.headline)
