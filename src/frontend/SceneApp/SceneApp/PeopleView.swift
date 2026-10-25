@@ -56,7 +56,7 @@ struct PeopleView: View {
                                     }
                                 }
                             } label: {
-                                Text(enrolling ? "Enrolling…” : "Enroll")
+                                Text(enrolling ? "Enrolling…" : "Enroll")
                                     .font(Theme.title(15))
                                     .foregroundStyle(Theme.paper)
                                     .padding(.horizontal, 16)

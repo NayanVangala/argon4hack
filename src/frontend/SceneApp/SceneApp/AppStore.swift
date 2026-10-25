@@ -108,7 +108,6 @@ final class AppStore {
         _ = try? await send("/api/v1/pin", body: ["scene_id": scene.id])
     }
 
-<<<<<<< HEAD
     /// Start or stop recording. On a server this starts/ends a real session (POST /sessions, /sessions/{id}/end).
     func setRecording(_ on: Bool) async {
         if useMock {
@@ -328,7 +327,7 @@ final class AppStore {
         wipedBefore = Date()
         scenes = []
         pinned = []
-        if isRecording { await setRecording(false) }
+        await endSession()
     }
 
     // MARK: Sessions (contract: POST /sessions → POST /sessions/{id}/end)
@@ -336,13 +335,14 @@ final class AppStore {
     func startSession() async {
         if isRecording { return }
         if useMock { isRecording = true; return }
+        isRecording = true   // flip the button instantly; put it back if the server says no
         do {
             let started: SessionStartResponse = try await post("/api/v1/sessions", body: [:])
             sessionId = started.id
-            isRecording = true
             lastError = nil
             connectLive()
         } catch {
+            isRecording = false
             lastError = "Couldn't start session: \(error.localizedDescription)"
         }
     }
@@ -358,13 +358,14 @@ final class AppStore {
             lastError = "Stopped locally: no session id to end."
             return
         }
+        isRecording = false   // flip the button instantly; put it back if the server says no
         do {
             let _: SessionEndResponse = try await post("/api/v1/sessions/\(id)/end", body: [:])
             sessionId = nil
-            isRecording = false
             disconnectLive()
             lastError = nil
         } catch {
+            isRecording = true
             lastError = "Couldn't end session: \(error.localizedDescription)"
         }
     }
