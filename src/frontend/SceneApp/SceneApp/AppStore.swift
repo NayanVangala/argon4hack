@@ -103,19 +103,19 @@ final class AppStore {
             isRecording = on
             return
         }
+        // Flip the button right away (no waiting on the network), then tell the server
+        let previous = isRecording
+        isRecording = on
         do {
             if on {
                 let session: SessionInfo = try await post("/api/v1/sessions", body: [:])
                 sessionId = session.id
-                isRecording = true
-            } else {
-                if let id = sessionId {
-                    try await send("/api/v1/sessions/\(id)/end", body: [:])
-                }
-                isRecording = false
+            } else if let id = sessionId {
+                try await send("/api/v1/sessions/\(id)/end", body: [:])
             }
             lastError = nil
         } catch {
+            isRecording = previous   // server said no: put the button back
             lastError = "Couldn't \(on ? "start" : "stop") recording: \(error.localizedDescription)"
         }
     }
