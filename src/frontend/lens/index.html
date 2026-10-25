@@ -113,6 +113,8 @@
   .day-row { flex: none; min-height: 56px; border-radius: 28px; background: var(--card); display: flex; align-items: center; padding: 0 22px; font-family: Archivo, sans-serif; font-weight: 700; font-size: 22px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .day-row.dim { background: var(--card-dim); color: var(--muted); font-size: 20px; }
   #day-from-timeline { position: absolute; right: 48px; bottom: 96px; }
+  /* Leave a row for the Day button so it never sits on top of the scene cards */
+  #timeline .cards { bottom: 176px; }
 
   /* Stop */
   .stop-top { position: absolute; top: 64px; left: 48px; right: 48px; display: flex; flex-direction: column; gap: 16px; }
