@@ -88,6 +88,66 @@ final class AppStore {
         isRecording = false
     }
 
+    // MARK: Follow-through agent (POST /followups/generate → poll GET /followups)
+
+    var followups: [FollowUp] = []
+    var followupStep = -1          // -1 idle · 0 find promises · 1 check quotes · 2 draft · 3 done
+    var followupError: String? = nil
+
+    func runFollowThrough() async {
+        followupError = nil
+        followups = []
+        followupStep = 0
+        if useMock {
+            for step in 1...3 {
+                try? await Task.sleep(nanoseconds: 900_000_000)
+                followupStep = step
+            }
+            followups = MockData.followups
+            return
+        }
+        do {
+            let run: FollowUpRun = try await post("/api/v1/followups/generate", body: [:])
+            // Poll until the agent's drafts show up (real runs take a while; give it ~90s)
+            for attempt in 0..<60 {
+                let list: FollowUpList = try await get("/api/v1/followups?run_id=\(run.runId)")
+                if !list.followups.isEmpty {
+                    // Tick through the remaining steps so the loop is visible, then show results
+                    while followupStep < 3 {
+                        try? await Task.sleep(nanoseconds: 500_000_000)
+                        followupStep += 1
+                    }
+                    followups = list.followups
+                    return
+                }
+                followupStep = min(2, 1 + attempt / 10)
+                try await Task.sleep(nanoseconds: 1_500_000_000)
+            }
+            followupError = "The agent is still working. Try again in a minute."
+            followupStep = -1
+        } catch {
+            followupError = "Follow-through failed: \(error.localizedDescription)"
+            followupStep = -1
+        }
+    }
+
+    /// Approve or dismiss. Nothing is sent anywhere without this tap.
+    func updateFollowUp(id: String, draft: String, approve: Bool) async {
+        guard let i = followups.firstIndex(where: { $0.id == id }) else { return }
+        followups[i].draft = draft
+        if !useMock {
+            do {
+                try await send("/api/v1/followups/\(id)/\(approve ? "approve" : "dismiss")", body: [:])
+            } catch {
+                followupError = error.localizedDescription
+                return
+            }
+        }
+        if let j = followups.firstIndex(where: { $0.id == id }) {
+            followups[j].status = approve ? "approved" : "dismissed"
+        }
+    }
+
     // MARK: Networking
 
     private func request(_ path: String) throws -> URLRequest {

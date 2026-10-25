@@ -6,6 +6,7 @@ struct MemoryView: View {
     @State private var opened: SceneItem?
     @State private var showAsk = false
     @State private var appeared = false
+    @State private var showFollowUps = false
 
     private var featured: SceneItem? {
         store.scenes.first { $0.speaker == "Maya" && $0.quote != nil }
@@ -43,6 +44,10 @@ struct MemoryView: View {
                         .buttonStyle(SquishStyle())
                         .padding(.horizontal, 20)
                 }
+
+                Button { showFollowUps = true } label: { FollowUpsEntry() }
+                    .buttonStyle(SquishStyle())
+                    .padding(.horizontal, 20)
 
                 if let err = store.lastError {
                     Text(err).font(Theme.mono(12)).foregroundStyle(Theme.danger).padding(.horizontal, 20)
@@ -87,6 +92,11 @@ struct MemoryView: View {
                 opened = nil
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { showAsk = true }
             }
+        }
+        .sheet(isPresented: $showFollowUps) {
+            FollowUpsView()
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showAsk) {
             AskView(bottomPadding: 16, autoFocus: true)

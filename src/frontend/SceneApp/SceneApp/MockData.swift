@@ -39,6 +39,20 @@ enum MockData {
         "What did I promise today?",
     ]
 
+    static let followups: [FollowUp] = [
+        FollowUp(id: "f1", runId: "mock", promise: "Maya promised the Q3 numbers by Friday", person: "Maya",
+                 quote: "I'll send the Q3 numbers by Friday.", quoteVerified: true, verifiedAt: nil,
+                 draft: "Hi Maya, following up on the Q3 numbers you mentioned today. Could you send them over by Friday?",
+                 status: "pending", sceneId: "s4"),
+        FollowUp(id: "f2", runId: "mock", promise: "You told Priya you'd send her the deck", person: "Priya",
+                 quote: "Send me the deck when it's ready.", quoteVerified: true, verifiedAt: nil,
+                 draft: "Hi Priya, here's the deck we talked about over coffee.",
+                 status: "pending", sceneId: "s8"),
+        FollowUp(id: "f3", runId: "mock", promise: "Someone said to keep the price at 49", person: "Unknown",
+                 quote: "Let's keep it at forty-nine.", quoteVerified: false, verifiedAt: nil,
+                 draft: "", status: "needs_review", sceneId: "s7"),
+    ]
+
     static func answer(for query: String) -> AskResponse {
         let q = query.lowercased()
         if q.contains("maya") || (q.contains("promise") && !q.contains(" i ")) {
