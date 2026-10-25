@@ -195,14 +195,14 @@ struct ReceiptCard: View {
     }
 
     private var sourceLabel: String {
-        receipt.displayConfidence == .verified ? "FACE + VOICE" : "VOICE ONLY"
+        receipt.displayConfidence == .verified ? "SPEAKER VERIFIED" : "SPEAKER NOT CONFIRMED"
     }
     private var receiptLine: String {
         if receipt.displayConfidence == .verified {
             if let s = receipt.speaker { return "[\(s.uppercased()) · VERIFIED VERBATIM · \(receipt.displayTime)]" }
             return "[VERIFIED VERBATIM · \(receipt.displayTime)]"
         }
-        return "[UNKNOWN SPEAKER · NOT VERIFIED · \(receipt.displayTime)]"
+        return "[VERBATIM QUOTE · SPEAKER NOT CONFIRMED · \(receipt.displayTime)]"
     }
 }
 

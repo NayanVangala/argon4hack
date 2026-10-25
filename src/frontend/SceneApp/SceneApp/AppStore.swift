@@ -100,7 +100,17 @@ final class AppStore {
             return MockData.answer(for: query)
         }
         do {
-            return try await post("/api/v1/ask", body: ["query": query])
+            let response: AskResponse = try await post("/api/v1/ask", body: ["query": query])
+            // Receipts arrive without a confidence field. Use the confidence the server gave
+            // the receipt's own scene (a real server field), never an invented one.
+            let receipts = response.receipts.map { receipt -> Receipt in
+                var r = receipt
+                if r.confidence == nil, let scene = scenes.first(where: { $0.id == r.sceneId }) {
+                    r.confidence = scene.displayConfidence.rawValue
+                }
+                return r
+            }
+            return AskResponse(answer: response.answer, receipts: receipts)
         } catch {
             lastError = "Ask failed: \(error.localizedDescription)"
             return AskResponse(answer: "I couldn't reach the memory right now.", receipts: [])
