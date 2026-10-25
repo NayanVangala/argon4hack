@@ -32,6 +32,14 @@ enum MockData {
         Person(id: "p3", name: "Priya", quotes: 5, scenes: 3, verified: true),
     ]
 
+    /// Chips for a real backend: general questions that work on any recorded day.
+    static let liveSuggestions = [
+        "What did I promise today?",
+        "Who did I talk to today?",
+        "What decisions did we make?",
+        "What did Maya promise me?",
+    ]
+
     static let suggestions = [
         "What did Maya promise me?",
         "When did we discuss pricing?",

@@ -66,6 +66,9 @@ final class AppStore {
     var lastError: String? = nil
     var pendingQuery: String? = nil
 
+    /// Suggestion chips: practice questions on mock data, general ones on a real backend.
+    var suggestions: [String] { useMock ? MockData.suggestions : MockData.liveSuggestions }
+
     // MARK: Loading
 
     func loadToday() async {

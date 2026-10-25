@@ -103,7 +103,7 @@ struct MemoryView: View {
         VStack(alignment: .leading, spacing: 10) {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
-                    ForEach(MockData.suggestions, id: \.self) { q in
+                    ForEach(store.suggestions, id: \.self) { q in
                         Button {
                             // Same Ask tab instance as the tab bar, not a
                             // separate sheet: history stays shared.

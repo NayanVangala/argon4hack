@@ -76,7 +76,7 @@ struct AskView: View {
             VStack(spacing: 10) {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
-                        ForEach(MockData.suggestions, id: \.self) { s in
+                        ForEach(store.suggestions, id: \.self) { s in
                             Button {
                                 query = s
                                 submit()
