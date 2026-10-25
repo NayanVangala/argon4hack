@@ -15,6 +15,42 @@ nonisolated struct FollowUp: Identifiable, Codable, Hashable {
     var draft: String
     var status: String          // pending | approved | dismissed | sent | needs_review
     var sceneId: String?
+    // Real follow-through fields (backend app/actions.py). Optional so mock data still decodes.
+    var actionType: String? = nil      // email | reply | calendar | todo
+    var recipient: String? = nil
+    var dueAt: String? = nil
+    var changedFrom: String? = nil
+    var actionUrl: String? = nil       // mailto: draft or calendar form, set after approval
+    var executionStatus: String? = nil
+}
+
+extension FollowUp {
+    var kindLabel: String {
+        switch actionType {
+        case "email": return "EMAIL" + (person == "Unknown" ? "" : " TO \(person.uppercased())")
+        case "reply": return "REPLY" + (person == "Unknown" ? "" : " TO \(person.uppercased())")
+        case "calendar": return "CALENDAR EVENT"
+        case "todo": return "TO-DO"
+        default: return "FOLLOW-UP"
+        }
+    }
+
+    var approveLabel: String {
+        switch actionType {
+        case "email": return "Approve and open in Mail"
+        case "reply": return "Approve and open reply"
+        case "calendar": return "Approve and open calendar"
+        case "todo": return "Add to my to-do list"
+        default: return "Approve"
+        }
+    }
+
+    var hasDraft: Bool { actionType == nil || actionType == "email" || actionType == "reply" }
+
+    var dueText: String? {
+        guard let dueAt, let date = ISO8601DateFormatter().date(from: dueAt) else { return nil }
+        return date.formatted(date: .abbreviated, time: .shortened)
+    }
 }
 
 nonisolated struct FollowUpRun: Codable {
@@ -120,6 +156,22 @@ struct FollowUpsView: View {
                     }
                 }
 
+                let todos = store.followups.filter { $0.actionType == "todo" && $0.status == "approved" }
+                if !todos.isEmpty {
+                    Text("YOUR TO-DO LIST").font(.system(size: 13, weight: .bold)).foregroundStyle(Theme.secondary).padding(.top, 8)
+                    ForEach(todos) { t in
+                        HStack(alignment: .top, spacing: 10) {
+                            Image(systemName: "circle").font(.system(size: 16, weight: .semibold)).foregroundStyle(Theme.ink)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(t.promise).font(Theme.body(16)).foregroundStyle(Theme.ink)
+                                if let due = t.dueText {
+                                    Text("BY \(due.uppercased())").font(Theme.mono(11)).foregroundStyle(Theme.secondary)
+                                }
+                            }
+                        }
+                    }
+                }
+
                 if store.followupStep == 3 {
                     Button {
                         Task { await store.runFollowThrough() }
@@ -190,6 +242,9 @@ struct FollowUpRow: View {
                 .frame(width: 52, height: 52)
                 .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Color(hex: 0x55595D)))
             VStack(alignment: .leading, spacing: 8) {
+                Text(followup.kindLabel + (followup.dueText.map { " · \($0.uppercased())" } ?? ""))
+                    .font(Theme.mono(11))
+                    .foregroundStyle(Theme.secondary)
                 Text(followup.promise)
                     .font(Theme.title(18))
                     .foregroundStyle(Theme.ink)
@@ -233,6 +288,8 @@ struct FollowUpDetailView: View {
     let followupID: String
     @State private var draft = ""
     @State private var working = false
+    @State private var confirming = false
+    @Environment(\.openURL) private var openURL
 
     private var followup: FollowUp? { store.followups.first { $0.id == followupID } }
 
@@ -253,14 +310,20 @@ struct FollowUpDetailView: View {
 
         return ScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                Text("FOLLOW-UP TO \(f.person.uppercased())")
+                Text(f.actionType == nil ? "FOLLOW-UP TO \(f.person.uppercased())" : f.kindLabel)
                     .font(.system(size: 13, weight: .bold))
                     .foregroundStyle(Theme.secondary)
                 Text(f.promise)
                     .font(Theme.display(28))
                     .foregroundStyle(Theme.ink)
                     .fixedSize(horizontal: false, vertical: true)
+                if let due = f.dueText {
+                    Text("DUE \(due.uppercased())" + (f.changedFrom.map { " · CHANGED FROM \($0.uppercased())" } ?? ""))
+                        .font(Theme.mono(12))
+                        .foregroundStyle(Theme.secondary)
+                }
 
+                if f.hasDraft {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("DRAFT").font(.system(size: 13, weight: .bold)).foregroundStyle(Theme.secondary)
                     TextEditor(text: $draft)
@@ -271,6 +334,7 @@ struct FollowUpDetailView: View {
                         .padding(10)
                         .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(Theme.pill))
                         .disabled(!isPending)
+                }
                 }
 
                 Text("THE PROOF").font(.system(size: 13, weight: .bold)).foregroundStyle(Theme.secondary)
@@ -288,9 +352,9 @@ struct FollowUpDetailView: View {
                 if isPending {
                     HStack(spacing: 10) {
                         Button {
-                            act(approve: true)
+                            confirming = true
                         } label: {
-                            Text("Approve")
+                            Text(f.approveLabel)
                                 .font(Theme.title(17))
                                 .foregroundStyle(Theme.paper)
                                 .frame(maxWidth: .infinity, minHeight: 52)
@@ -309,6 +373,15 @@ struct FollowUpDetailView: View {
                         .buttonStyle(SquishStyle())
                     }
                     .disabled(working)
+                    .confirmationDialog(f.actionType == "todo" ? "Add this to your to-do list?" : "Approve this \(f.actionType ?? "follow-up")?",
+                                        isPresented: $confirming, titleVisibility: .visible) {
+                        Button(f.approveLabel) { act(approve: true) }
+                        Button("Cancel", role: .cancel) {}
+                    } message: {
+                        Text(f.actionType == "todo"
+                             ? "It will be saved to your Scene to-do list."
+                             : "Scene opens the draft for you. Nothing is sent until you press Send or Save there.")
+                    }
                     Text("NOTHING IS SENT UNTIL YOU APPROVE")
                         .font(Theme.mono(11))
                         .foregroundStyle(Theme.secondary)
@@ -320,12 +393,25 @@ struct FollowUpDetailView: View {
                             .foregroundStyle(Theme.ink)
                             .frame(maxWidth: .infinity, minHeight: 52)
                             .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.tint))
+                        if let link = f.actionUrl, let url = URL(string: link) {
+                            Button {
+                                openURL(url)
+                            } label: {
+                                Label(f.actionType == "calendar" ? "Open calendar" : "Open draft", systemImage: "arrow.up.right")
+                                    .font(Theme.title(17))
+                                    .foregroundStyle(Theme.paper)
+                                    .frame(maxWidth: .infinity, minHeight: 52)
+                                    .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.ink))
+                            }
+                            .buttonStyle(SquishStyle())
+                        } else if f.actionType != "todo" {
                         ShareLink(item: draft) {
                             Label("Send…", systemImage: "square.and.arrow.up")
                                 .font(Theme.title(17))
                                 .foregroundStyle(Theme.paper)
                                 .frame(maxWidth: .infinity, minHeight: 52)
                                 .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.ink))
+                        }
                         }
                     }
                 } else {
@@ -342,8 +428,9 @@ struct FollowUpDetailView: View {
     private func act(approve: Bool) {
         working = true
         Task {
-            await store.updateFollowUp(id: followupID, draft: draft, approve: approve)
+            let url = await store.updateFollowUp(id: followupID, draft: draft, approve: approve)
             working = false
+            if let url { openURL(url) }
         }
     }
 }
