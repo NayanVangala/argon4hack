@@ -28,7 +28,12 @@ final class AppStore {
             disconnectLive()
         }
     }
-    var token: String? = nil                // never hard-code a real token here (repo is public)
+    // Typed in the app (Session → Developer). Saved on this phone only, never in the repo.
+    var token: String? = UserDefaults.standard.string(forKey: "apiToken").flatMap { $0.isEmpty ? nil : $0 } {
+        didSet { UserDefaults.standard.set(token ?? "", forKey: "apiToken") }
+    }
+    /// What the last wipe actually did, shown on the Session screen so we never overclaim.
+    var wipeNote: String? = nil
 
     var scenes: [SceneItem] = []
     var people: [Person] = MockData.people
@@ -322,12 +327,24 @@ final class AppStore {
     }
 
     func wipe() async {
-        // API gap: the backend has no delete endpoint yet. This stops recording and hides
-        // everything up to now in the app, but the data still exists on the server.
-        wipedBefore = Date()
+        await endSession()
         scenes = []
         pinned = []
-        await endSession()
+        if useMock {
+            wipeNote = "WIPED (MOCK DATA)"
+            return
+        }
+        do {
+            // Real delete when the server has it (DELETE /api/v1/data)
+            try await delete("/api/v1/data")
+            wipedBefore = nil
+            wipeNote = "WIPED ON THE SERVER"
+            lastError = nil
+        } catch {
+            // No delete endpoint on this server: hide everything up to now in the app only
+            wipedBefore = Date()
+            wipeNote = "HIDDEN IN THE APP · THIS SERVER CAN'T DELETE YET"
+        }
     }
 
     // MARK: Sessions (contract: POST /sessions → POST /sessions/{id}/end)
@@ -470,6 +487,13 @@ final class AppStore {
         var req = URLRequest(url: url)
         if let token { req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization") }
         return req
+    }
+
+    private func delete(_ path: String) async throws {
+        var req = try request(path)
+        req.httpMethod = "DELETE"
+        let (data, response) = try await URLSession.shared.data(for: req)
+        try check(response, data)
     }
 
     private func get<T: Decodable>(_ path: String) async throws -> T {

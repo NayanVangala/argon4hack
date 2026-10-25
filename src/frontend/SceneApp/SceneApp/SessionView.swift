@@ -97,6 +97,10 @@ struct SessionView: View {
                 }
                 .buttonStyle(SquishStyle())
 
+                if let note = store.wipeNote {
+                    Text(note).font(Theme.mono(12)).foregroundStyle(Theme.secondary)
+                }
+
                 DeveloperSection()
             }
             .padding(.horizontal, 20)
@@ -141,6 +145,17 @@ struct DeveloperSection: View {
                     #if os(iOS)
                     .textInputAutocapitalization(.never)
                     .keyboardType(.URL)
+                    #endif
+                    .padding(.horizontal, 14)
+                    .frame(height: 48)
+                    .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Theme.pill))
+                SecureField("Token (if the server needs one)", text: Binding(
+                    get: { store.token ?? "" },
+                    set: { store.token = $0.isEmpty ? nil : $0 }))
+                    .font(Theme.mono(15))
+                    .autocorrectionDisabled()
+                    #if os(iOS)
+                    .textInputAutocapitalization(.never)
                     #endif
                     .padding(.horizontal, 14)
                     .frame(height: 48)
