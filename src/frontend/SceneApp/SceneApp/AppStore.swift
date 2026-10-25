@@ -72,6 +72,8 @@ final class AppStore {
             if let id = status.sessionId { sessionId = id }
             lastError = nil
         } catch {
+            // A refresh that got cancelled (tab switch, overlapping refresh) isn't a real error
+            if Self.isCancellation(error) { return }
             lastError = "Couldn't reach the backend: \(error.localizedDescription)"
         }
     }
@@ -188,6 +190,12 @@ final class AppStore {
     }
 
     // MARK: Networking
+
+    private static func isCancellation(_ error: Error) -> Bool {
+        if error is CancellationError { return true }
+        if let urlError = error as? URLError, urlError.code == .cancelled { return true }
+        return false
+    }
 
     private func request(_ path: String) throws -> URLRequest {
         guard let url = URL(string: baseURL + path) else { throw URLError(.badURL) }
