@@ -4,7 +4,6 @@ struct MemoryView: View {
     @Environment(AppStore.self) private var store
     @Binding var tab: AppTab
     @State private var opened: SceneItem?
-    @State private var showAsk = false
     @State private var appeared = false
     @State private var showFollowUps = false
 
@@ -39,6 +38,48 @@ struct MemoryView: View {
                     TimelineStrip(scenes: store.scenes, highlighted: featured?.id, pinned: store.pinned, appeared: appeared) { opened = $0 }
                 }
 
+                // Pins, managed here (and in each scene's detail): tap a row
+                // to open it, tap the pin button to unpin it locally.
+                if !store.pinned.isEmpty {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("PINNED · \(store.pinned.count)")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundStyle(Theme.secondary)
+                        ForEach(store.scenes.filter { store.pinned.contains($0.id) }) { s in
+                            HStack(spacing: 12) {
+                                Button { opened = s } label: {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(s.quote ?? s.summary)
+                                            .font(Theme.title(17))
+                                            .foregroundStyle(Theme.ink)
+                                            .multilineTextAlignment(.leading)
+                                        Text(s.startTs.clock)
+                                            .font(Theme.mono(12))
+                                            .foregroundStyle(Theme.secondary)
+                                    }
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                                .buttonStyle(SquishStyle())
+                                Button { store.unpin(s) } label: {
+                                    Image(systemName: "pin.slash")
+                                        .font(.system(size: 15, weight: .bold))
+                                        .foregroundStyle(Theme.ink)
+                                        .frame(width: 44, height: 44)
+                                        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Theme.pill))
+                                }
+                                .buttonStyle(SquishStyle())
+                                .accessibilityLabel("Unpin \(s.summary)")
+                            }
+                            .padding(12)
+                            .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(Theme.pill))
+                        }
+                        Text("UNPINNING REMOVES IT HERE ONLY · THE SERVER PIN STAYS UNTIL AN UNPIN ROUTE EXISTS")
+                            .font(Theme.mono(11))
+                            .foregroundStyle(Theme.secondary)
+                    }
+                    .padding(.horizontal, 20)
+                }
+
                 if let f = featured {
                     Button { opened = f } label: { FeaturedQuote(scene: f) }
                         .buttonStyle(SquishStyle())
@@ -64,15 +105,17 @@ struct MemoryView: View {
                 HStack(spacing: 8) {
                     ForEach(MockData.suggestions, id: \.self) { q in
                         Button {
+                            // Same Ask tab instance as the tab bar, not a
+                            // separate sheet: history stays shared.
                             store.pendingQuery = q
-                            showAsk = true
+                            tab = .ask
                         } label: { Chip(text: q) }
                         .buttonStyle(SquishStyle())
                     }
                 }
                 .padding(.horizontal, 20)
             }
-            Button { showAsk = true } label: { AskBarLabel() }
+            Button { tab = .ask } label: { AskBarLabel() }
                 .buttonStyle(SquishStyle())
                 .padding(.horizontal, 20)
         }
@@ -84,7 +127,12 @@ struct MemoryView: View {
                 .ignoresSafeArea()
         )
         }
-        .onAppear { appeared = true }
+        .onAppear {
+            appeared = true
+            // Live socket first (gapfill); the 15s poll below (Isabella)
+            // is backup for a dropped socket, which has no auto-reconnect.
+            store.connectLive()
+        }
         // When connected to a server, pick up new scenes on their own (no pull-to-refresh needed)
         .task {
             while !Task.isCancelled {
@@ -95,20 +143,15 @@ struct MemoryView: View {
         .sensoryFeedback(.impact(weight: .light), trigger: opened)
         .sheet(item: $opened) { scene in
             SceneDetailView(scene: scene) { question in
+                // Same Ask tab instance: dismiss the sheet, then switch tabs;
+                // AskView's onAppear consumes pendingQuery into shared history.
                 store.pendingQuery = question
                 opened = nil
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { showAsk = true }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { tab = .ask }
             }
         }
         .sheet(isPresented: $showFollowUps) {
             FollowUpsView()
-                .presentationDetents([.large])
-                .presentationDragIndicator(.visible)
-        }
-        .sheet(isPresented: $showAsk) {
-            AskView(bottomPadding: 16, autoFocus: true)
-                .padding(.top, 8)
-                .background(Theme.paper)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }

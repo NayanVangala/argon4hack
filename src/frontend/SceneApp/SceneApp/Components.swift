@@ -185,6 +185,10 @@ struct ReceiptCard: View {
                 .font(Theme.mono(12))
                 .foregroundStyle(.white.opacity(0.7))
                 .fixedSize(horizontal: false, vertical: true)
+            Text("SCENE \(receipt.sceneId)")
+                .font(Theme.mono(11))
+                .foregroundStyle(.white.opacity(0.5))
+                .fixedSize(horizontal: false, vertical: true)
         }
         .padding(18)
         .background(RoundedRectangle(cornerRadius: 28, style: .continuous).fill(Theme.ink))

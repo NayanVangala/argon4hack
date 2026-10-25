@@ -5,10 +5,12 @@ struct AskView: View {
     var bottomPadding: CGFloat = 92
     var autoFocus = false   // room for the nav pill; smaller when shown as a sheet
     @State private var query = ""
-    @State private var asked: String?
-    @State private var response: AskResponse?
-    @State private var loading = false
+    // History lives in store.askHistory (shared, above the tabs), NOT here:
+    // this view is recreated on every tab switch, so local @State history
+    // would vanish. Only the in-progress draft input stays local.
     @FocusState private var focused: Bool
+
+    private var loading: Bool { store.askHistory.last?.isLoading == true }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -22,17 +24,7 @@ struct AskView: View {
                     }
                     MiniStrip(scenes: store.scenes)
 
-                    if let q = asked {
-                        HStack {
-                            Spacer(minLength: 40)
-                            Text(q)
-                                .font(Theme.body(17))
-                                .foregroundStyle(Theme.ink)
-                                .padding(.horizontal, 18)
-                                .padding(.vertical, 12)
-                                .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(Theme.pill))
-                        }
-                    } else {
+                    if store.askHistory.isEmpty {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Ask anything.").font(Theme.display(36)).foregroundStyle(Theme.ink)
                             Text("Every answer comes with the video to prove it.")
@@ -41,23 +33,36 @@ struct AskView: View {
                         .padding(.top, 12)
                     }
 
-                    if loading {
-                        Text("CHECKING THE FOOTAGE…")
-                            .font(Theme.mono())
-                            .foregroundStyle(Theme.secondary)
-                            .transition(.opacity)
-                    }
-
-                    if let r = response {
+                    // Full shared history, oldest first: every past turn stays
+                    // visible when you come back from another tab.
+                    ForEach(store.askHistory) { turn in
                         VStack(alignment: .leading, spacing: 14) {
-                            Text("ANSWER").font(.system(size: 13, weight: .bold)).foregroundStyle(Theme.secondary)
-                            Text(r.answer)
-                                .font(Theme.body(17))
-                                .foregroundStyle(Theme.ink)
-                                .fixedSize(horizontal: false, vertical: true)
-                            ForEach(r.receipts) { receipt in
-                                ReceiptCard(receipt: receipt)
-                                    .transition(.scale(scale: 0.92).combined(with: .opacity))
+                            HStack {
+                                Spacer(minLength: 40)
+                                Text(turn.question)
+                                    .font(Theme.body(17))
+                                    .foregroundStyle(Theme.ink)
+                                    .padding(.horizontal, 18)
+                                    .padding(.vertical, 12)
+                                    .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(Theme.pill))
+                            }
+                            if turn.isLoading {
+                                Text("CHECKING THE FOOTAGE…")
+                                    .font(Theme.mono())
+                                    .foregroundStyle(Theme.secondary)
+                                    .transition(.opacity)
+                            } else if let r = turn.response {
+                                VStack(alignment: .leading, spacing: 14) {
+                                    Text("ANSWER").font(.system(size: 13, weight: .bold)).foregroundStyle(Theme.secondary)
+                                    Text(r.answer)
+                                        .font(Theme.body(17))
+                                        .foregroundStyle(Theme.ink)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                    ForEach(r.receipts) { receipt in
+                                        ReceiptCard(receipt: receipt)
+                                            .transition(.scale(scale: 0.92).combined(with: .opacity))
+                                    }
+                                }
                             }
                         }
                     }
@@ -125,20 +130,11 @@ struct AskView: View {
     private func submit() {
         let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !q.isEmpty, !loading else { return }
-        asked = q
         query = ""
         focused = false
-        withAnimation(Springs.snappy) {
-            response = nil
-            loading = true
-        }
-        Task {
-            let r = await store.ask(q)
-            withAnimation(Springs.pop) {
-                response = r
-                loading = false
-            }
-        }
+        // The turn (and its loading state) lives in the store, so it
+        // survives this view being torn down on a tab switch.
+        Task { await store.submitAsk(q) }
     }
 }
 

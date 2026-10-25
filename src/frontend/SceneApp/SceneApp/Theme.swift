@@ -1,6 +1,6 @@
 import SwiftUI
 
-// Scene · Blue Light palette (blue / white / black, red only for recording + wipe)
+// Scene · Butter palette (lime / yellow / white / true-black, red only for recording + wipe)
 extension Color {
     init(hex: UInt32) {
         self.init(.sRGB,
@@ -17,11 +17,12 @@ enum Theme {
     static let trueBlack = Color(hex: 0x0F0F0F)  // timeline strip, Live
     static let pill = Color(hex: 0xEDEDED)       // nav pill, chips, inputs
     static let secondary = Color(hex: 0x6B6B6B)  // secondary text
-    static let accent = Color(hex: 0x3D63C9)     // accent blue (focus, highlight)
-    static let tint = Color(hex: 0xD6E1F7)       // light blue (verified chips)
-    static let soft = Color(hex: 0xA9BEE9)       // soft blue blocks
-    static let greyBlue = Color(hex: 0xE4E8EF)   // quiet blocks
-    static let mist = Color(hex: 0xC3D0EA)       // quiet blocks
+    static let accent = Color(hex: 0xBCF015)     // lime, primary accent (focus, highlight)
+    static let yellow = Color(hex: 0xE9D352)     // Butter yellow, secondary accent
+    static let tint = Color(hex: 0xE9D352)       // yellow (verified chips, quote blocks)
+    static let soft = Color(hex: 0xBCF015)       // lime (action blocks)
+    static let greyBlue = Color(hex: 0xE2E2E2)   // quiet blocks (Butter hairline grey)
+    static let mist = Color(hex: 0xD6D6D6)       // quiet blocks (darker neutral grey)
     static let photo = Color(hex: 0x2B2D2F)      // video placeholder
     static let danger = Color(hex: 0xD24A3E)     // recording dot, wipe
 

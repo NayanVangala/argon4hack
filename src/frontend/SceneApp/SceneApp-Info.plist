@@ -2,6 +2,14 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<!-- Hackathon only: lets the app talk to the backend over plain http (laptop / local network). -->
+	<!-- This file is the real Info.plist now: project.pbxproj sets -->
+	<!-- GENERATE_INFOPLIST_FILE = NO, because with YES Xcode generates its -->
+	<!-- own plist and silently drops this file (that is why the ATS entries -->
+	<!-- below previously had no effect). The keys below are the literal -->
+	<!-- equivalents of the INFOPLIST_KEY_* build settings that were removed -->
+	<!-- from the pbxproj at the same time; INFOPLIST_KEY_* only applies -->
+	<!-- when generating, so keeping them would have been dead config. -->
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>
@@ -9,6 +17,13 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Scene connects to your team's backend on this network.</string>
+	<!-- Was INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES -->
+	<key>UIApplicationSupportsIndirectInputEvents</key>
+	<true/>
+	<!-- LaunchLogo from Isabella's launch screen (was an empty generated dict) -->
 	<key>UILaunchScreen</key>
 	<dict>
 		<key>UIImageName</key>
@@ -16,5 +31,42 @@
 		<key>UIImageRespectsSafeAreaInsets</key>
 		<true/>
 	</dict>
+	<!-- Was INFOPLIST_KEY_UIStatusBarStyle = UIStatusBarStyleDefault -->
+	<key>UIStatusBarStyle</key>
+	<string>UIStatusBarStyleDefault</string>
+	<!-- Was INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES. -->
+	<!-- No SceneDelegate class: this is a pure SwiftUI @main App, so the -->
+	<!-- configuration carries a name only and the system creates the -->
+	<!-- default window scene for the WindowGroup. -->
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<false/>
+		<key>UISceneConfigurations</key>
+		<dict>
+			<key>UIWindowSceneSessionRoleApplication</key>
+			<array>
+				<dict>
+					<key>UISceneConfigurationName</key>
+					<string>Default Configuration</string>
+				</dict>
+			</array>
+		</dict>
+	</dict>
+	<!-- Was INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone -->
+	<key>UISupportedInterfaceOrientations~iphone</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<!-- Was INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad -->
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
 </dict>
 </plist>

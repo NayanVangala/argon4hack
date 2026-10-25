@@ -58,15 +58,23 @@ struct SceneDetailView: View {
 
                 HStack(spacing: 10) {
                     Button {
-                        Task { await store.pin(scene) }
+                        // Toggle: pin, then tap again to unpin. Unpin is
+                        // local-only (no unpin route in the API contract),
+                        // so the server pin row remains until one exists.
+                        if isPinned {
+                            store.unpin(scene)
+                        } else {
+                            Task { await store.pin(scene) }
+                        }
                     } label: {
-                        Label(isPinned ? "Pinned" : "Pin", systemImage: isPinned ? "checkmark" : "pin")
+                        Label(isPinned ? "Unpin" : "Pin", systemImage: isPinned ? "pin.slash" : "pin")
                             .font(Theme.title(17))
                             .foregroundStyle(isPinned ? Theme.ink : Theme.paper)
                             .frame(maxWidth: .infinity, minHeight: 52)
                             .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(isPinned ? Theme.tint : Theme.ink))
                     }
                     .buttonStyle(SquishStyle())
+                    .accessibilityLabel(isPinned ? "Unpin this scene" : "Pin this scene")
                     .sensoryFeedback(.impact(weight: .medium), trigger: isPinned)
 
                     Button {

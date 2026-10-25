@@ -24,7 +24,13 @@ struct SessionView: View {
 
                 VStack(spacing: 14) {
                     Button {
-                        Task { await store.setRecording(!store.isRecording) }
+                        Task {
+                            if store.isRecording {
+                                await store.endSession()
+                            } else {
+                                await store.startSession()
+                            }
+                        }
                     } label: {
                         ZStack {
                             // Breathing ring while recording (spec §6.5)
@@ -107,7 +113,12 @@ struct SessionView: View {
             Text("Deletes today's \(store.scenes.count) blocks, transcripts and pins. This can't be undone.")
         }
         .sensoryFeedback(.impact(weight: .heavy), trigger: wipeCount)
-        .onAppear { glow = true }
+        .onAppear {
+            glow = true
+            // Real mode only (refreshStatus no-ops under mock): pull GET /status
+            // so the spend row shows real spend_usd, not "$—".
+            Task { await store.refreshStatus() }
+        }
     }
 }
 

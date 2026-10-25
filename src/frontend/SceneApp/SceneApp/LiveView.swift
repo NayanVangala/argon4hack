@@ -26,7 +26,16 @@ struct LiveView: View {
                 Text("SCENE \(store.scenes.count)").font(Theme.mono(13)).foregroundStyle(.white.opacity(0.6))
                 Spacer()
                 Button {
-                    Task { await store.setRecording(!store.isRecording) }
+                    // Same treatment as SessionView: real session endpoints,
+                    // never a local toggle. Mock mode flips locally inside
+                    // startSession/endSession, so the demo still works offline.
+                    Task {
+                        if store.isRecording {
+                            await store.endSession()
+                        } else {
+                            await store.startSession()
+                        }
+                    }
                 } label: {
                     Text(store.isRecording ? "End" : "Start")
                         .font(Theme.title(15))
@@ -98,6 +107,11 @@ struct LiveView: View {
         .onAppear {
             breathe = true
             showStickers = true
+            // Real mode only (connectLive no-ops under mock): open WS /live
+            // so new scenes land here without a manual reload. No disconnect
+            // on disappear: the socket stays up across tabs so Memory updates
+            // too, and a dropped socket just degrades to pull-to-refresh.
+            store.connectLive()
         }
     }
 
