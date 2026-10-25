@@ -1,0 +1,336 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		AAAAAAAABBBBBBBBCCCC0020 /* SceneBridgeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAAAAAABBBBBBBBCCCC0010 /* SceneBridgeApp.swift */; };
+		AAAAAAAABBBBBBBBCCCC0021 /* Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAAAAAABBBBBBBBCCCC0011 /* Config.swift */; };
+		AAAAAAAABBBBBBBBCCCC0022 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAAAAAABBBBBBBBCCCC0012 /* Models.swift */; };
+		AAAAAAAABBBBBBBBCCCC0023 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAAAAAABBBBBBBBCCCC0013 /* APIClient.swift */; };
+		AAAAAAAABBBBBBBBCCCC0024 /* ChunkWriter.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAAAAAABBBBBBBBCCCC0014 /* ChunkWriter.swift */; };
+		AAAAAAAABBBBBBBBCCCC0025 /* WearablesViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAAAAAABBBBBBBBCCCC0015 /* WearablesViewModel.swift */; };
+		AAAAAAAABBBBBBBBCCCC0026 /* StreamViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAAAAAABBBBBBBBCCCC0016 /* StreamViewModel.swift */; };
+		AAAAAAAABBBBBBBBCCCC0027 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAAAAAABBBBBBBBCCCC0017 /* ContentView.swift */; };
+		AAAAAAAABBBBBBBBCCCC0028 /* StreamView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAAAAAABBBBBBBBCCCC0018 /* StreamView.swift */; };
+		AAAAAAAABBBBBBBBCCCC0029 /* MWDATCore in Frameworks */ = {isa = PBXBuildFile; productRef = AAAAAAAABBBBBBBBCCCC002C /* MWDATCore */; };
+		AAAAAAAABBBBBBBBCCCC002A /* MWDATCamera in Frameworks */ = {isa = PBXBuildFile; productRef = AAAAAAAABBBBBBBBCCCC002D /* MWDATCamera */; };
+		AAAAAAAABBBBBBBBCCCC002B /* MWDATMockDevice in Frameworks */ = {isa = PBXBuildFile; productRef = AAAAAAAABBBBBBBBCCCC002E /* MWDATMockDevice */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		AAAAAAAABBBBBBBBCCCC0010 /* SceneBridgeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneBridgeApp.swift; sourceTree = "<group>"; };
+		AAAAAAAABBBBBBBBCCCC0011 /* Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Config.swift; sourceTree = "<group>"; };
+		AAAAAAAABBBBBBBBCCCC0012 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		AAAAAAAABBBBBBBBCCCC0013 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
+		AAAAAAAABBBBBBBBCCCC0014 /* ChunkWriter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChunkWriter.swift; sourceTree = "<group>"; };
+		AAAAAAAABBBBBBBBCCCC0015 /* WearablesViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WearablesViewModel.swift; sourceTree = "<group>"; };
+		AAAAAAAABBBBBBBBCCCC0016 /* StreamViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreamViewModel.swift; sourceTree = "<group>"; };
+		AAAAAAAABBBBBBBBCCCC0017 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		AAAAAAAABBBBBBBBCCCC0018 /* StreamView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreamView.swift; sourceTree = "<group>"; };
+		AAAAAAAABBBBBBBBCCCC0019 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		AAAAAAAABBBBBBBBCCCC001A /* SceneBridge.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SceneBridge.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		AAAAAAAABBBBBBBBCCCC0008 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AAAAAAAABBBBBBBBCCCC0029 /* MWDATCore in Frameworks */,
+				AAAAAAAABBBBBBBBCCCC002A /* MWDATCamera in Frameworks */,
+				AAAAAAAABBBBBBBBCCCC002B /* MWDATMockDevice in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		AAAAAAAABBBBBBBBCCCC0003 = {
+			isa = PBXGroup;
+			children = (
+				AAAAAAAABBBBBBBBCCCC0005 /* SceneBridge */,
+				AAAAAAAABBBBBBBBCCCC0004 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		AAAAAAAABBBBBBBBCCCC0004 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				AAAAAAAABBBBBBBBCCCC001A /* SceneBridge.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		AAAAAAAABBBBBBBBCCCC0005 /* SceneBridge */ = {
+			isa = PBXGroup;
+			children = (
+				AAAAAAAABBBBBBBBCCCC0010 /* SceneBridgeApp.swift */,
+				AAAAAAAABBBBBBBBCCCC0011 /* Config.swift */,
+				AAAAAAAABBBBBBBBCCCC0012 /* Models.swift */,
+				AAAAAAAABBBBBBBBCCCC0013 /* APIClient.swift */,
+				AAAAAAAABBBBBBBBCCCC0014 /* ChunkWriter.swift */,
+				AAAAAAAABBBBBBBBCCCC0015 /* WearablesViewModel.swift */,
+				AAAAAAAABBBBBBBBCCCC0016 /* StreamViewModel.swift */,
+				AAAAAAAABBBBBBBBCCCC0006 /* Views */,
+				AAAAAAAABBBBBBBBCCCC0019 /* Info.plist */,
+			);
+			path = SceneBridge;
+			sourceTree = "<group>";
+		};
+		AAAAAAAABBBBBBBBCCCC0006 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				AAAAAAAABBBBBBBBCCCC0017 /* ContentView.swift */,
+				AAAAAAAABBBBBBBBCCCC0018 /* StreamView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		AAAAAAAABBBBBBBBCCCC0002 /* SceneBridge */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AAAAAAAABBBBBBBBCCCC000D /* Build configuration list for PBXNativeTarget "SceneBridge" */;
+			buildPhases = (
+				AAAAAAAABBBBBBBBCCCC0007 /* Sources */,
+				AAAAAAAABBBBBBBBCCCC0008 /* Frameworks */,
+				AAAAAAAABBBBBBBBCCCC0009 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = SceneBridge;
+			productName = SceneBridge;
+			productReference = AAAAAAAABBBBBBBBCCCC001A /* SceneBridge.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		AAAAAAAABBBBBBBBCCCC0001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1600;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					AAAAAAAABBBBBBBBCCCC0002 /* SceneBridge */ = {
+						CreatedOnToolsVersion = 16.0;
+					};
+				};
+			};
+			buildConfigurationList = AAAAAAAABBBBBBBBCCCC000A /* Build configuration list for PBXProject "SceneBridge" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = AAAAAAAABBBBBBBBCCCC0003;
+			packageReferences = (
+				AAAAAAAABBBBBBBBCCCC002F /* XCRemoteSwiftPackageReference "meta-wearables-dat-ios" */,
+			);
+			productRefGroup = AAAAAAAABBBBBBBBCCCC0004 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				AAAAAAAABBBBBBBBCCCC0002 /* SceneBridge */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		AAAAAAAABBBBBBBBCCCC0009 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		AAAAAAAABBBBBBBBCCCC0007 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AAAAAAAABBBBBBBBCCCC0020 /* SceneBridgeApp.swift in Sources */,
+				AAAAAAAABBBBBBBBCCCC0021 /* Config.swift in Sources */,
+				AAAAAAAABBBBBBBBCCCC0022 /* Models.swift in Sources */,
+				AAAAAAAABBBBBBBBCCCC0023 /* APIClient.swift in Sources */,
+				AAAAAAAABBBBBBBBCCCC0024 /* ChunkWriter.swift in Sources */,
+				AAAAAAAABBBBBBBBCCCC0025 /* WearablesViewModel.swift in Sources */,
+				AAAAAAAABBBBBBBBCCCC0026 /* StreamViewModel.swift in Sources */,
+				AAAAAAAABBBBBBBBCCCC0027 /* ContentView.swift in Sources */,
+				AAAAAAAABBBBBBBBCCCC0028 /* StreamView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		AAAAAAAABBBBBBBBCCCC000B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GENERATE_INFOPLIST_FILE = NO;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LOCALIZATION_PREFS = "";
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		AAAAAAAABBBBBBBBCCCC000C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GENERATE_INFOPLIST_FILE = NO;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LOCALIZATION_PREFS = "";
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		AAAAAAAABBBBBBBBCCCC000E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				INFOPLIST_FILE = SceneBridge/Info.plist;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.scene.bridge;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMBED_LIBRARIES_WITH_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		AAAAAAAABBBBBBBBCCCC000F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				INFOPLIST_FILE = SceneBridge/Info.plist;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.scene.bridge;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMBED_LIBRARIES_WITH_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		AAAAAAAABBBBBBBBCCCC000A /* Build configuration list for PBXProject "SceneBridge" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AAAAAAAABBBBBBBBCCCC000B /* Debug */,
+				AAAAAAAABBBBBBBBCCCC000C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AAAAAAAABBBBBBBBCCCC000D /* Build configuration list for PBXNativeTarget "SceneBridge" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AAAAAAAABBBBBBBBCCCC000E /* Debug */,
+				AAAAAAAABBBBBBBBCCCC000F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		AAAAAAAABBBBBBBBCCCC002F /* XCRemoteSwiftPackageReference "meta-wearables-dat-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/facebook/meta-wearables-dat-ios";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.0.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		AAAAAAAABBBBBBBBCCCC002C /* MWDATCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AAAAAAAABBBBBBBBCCCC002F /* XCRemoteSwiftPackageReference "meta-wearables-dat-ios" */;
+			productName = MWDATCore;
+		};
+		AAAAAAAABBBBBBBBCCCC002D /* MWDATCamera */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AAAAAAAABBBBBBBBCCCC002F /* XCRemoteSwiftPackageReference "meta-wearables-dat-ios" */;
+			productName = MWDATCamera;
+		};
+		AAAAAAAABBBBBBBBCCCC002E /* MWDATMockDevice */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AAAAAAAABBBBBBBBCCCC002F /* XCRemoteSwiftPackageReference "meta-wearables-dat-ios" */;
+			productName = MWDATMockDevice;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = AAAAAAAABBBBBBBBCCCC0001 /* Project object */;
+}
