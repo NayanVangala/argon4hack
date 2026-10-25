@@ -2,9 +2,10 @@ import Foundation
 import MWDATCore
 
 /// Owns DAT registration, device discovery, and camera permission.
-/// API verified against the official DAT docs + integration cookbook:
+/// API verified against the DAT iOS SDK 1.0.1 swiftinterface:
 /// Wearables.configure() (in App init), startRegistration/startUnregistration
-/// (throwing), handleUrl, registrationStateStream(), devicesStream(),
+/// (async throws), handleUrl, registrationStateStream(),
+/// devicesStream() (yields [DeviceIdentifier], resolved via deviceForIdentifier),
 /// checkPermissionStatus(.camera) / requestPermission(.camera).
 /// Registration-state enum cases are intentionally NOT named here: the view
 /// model publishes a description string so a renamed case cannot break the UI.
@@ -30,24 +31,32 @@ final class WearablesViewModel: ObservableObject {
         })
         observationTasks.append(Task {
             for await found in wearables.devicesStream() {
-                self.devices = found
+                // 1.0.1: devicesStream yields [DeviceIdentifier], not
+                // [Device]. Resolve each identifier to its Device object.
+                self.devices = found.compactMap { wearables.deviceForIdentifier($0) }
             }
         })
     }
 
     func register() {
-        do {
-            try wearables.startRegistration()
-        } catch {
-            lastError = "Registration failed: \(error)"
+        // 1.0.1: startRegistration is async throws.
+        Task {
+            do {
+                try await wearables.startRegistration()
+            } catch {
+                lastError = "Registration failed: \(error)"
+            }
         }
     }
 
     func unregister() {
-        do {
-            try wearables.startUnregistration()
-        } catch {
-            lastError = "Unregistration failed: \(error)"
+        // 1.0.1: startUnregistration is async throws.
+        Task {
+            do {
+                try await wearables.startUnregistration()
+            } catch {
+                lastError = "Unregistration failed: \(error)"
+            }
         }
     }
 
@@ -77,26 +86,6 @@ final class WearablesViewModel: ObservableObject {
                 cameraPermission = try await wearables.requestPermission(.camera)
             } catch {
                 lastError = "Permission request failed: \(error)"
-            }
-        }
-    }
-
-    /// Starts a device session for link management.
-    /// VERIFY: whether StreamSession needs this device session or manages its
-    /// own link. The CameraAccess sample creates StreamSession with an
-    /// AutoDeviceSelector directly; this session exists so link state is
-    /// observable even when not streaming.
-    func startDeviceSession() {
-        Task {
-            do {
-                let selector = AutoDeviceSelector(wearables: wearables)
-                let session = try wearables.createSession(deviceSelector: selector)
-                try session.start()
-                for await state in session.stateStream() {
-                    print("Device session state: \(state)")
-                }
-            } catch {
-                lastError = "Device session failed: \(error)"
             }
         }
     }
