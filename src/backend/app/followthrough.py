@@ -339,6 +339,11 @@ class FollowThroughService:
             value = (edits or {}).get(key)
             if isinstance(value, str) and value.strip():
                 changes[key] = value.strip()[:4000]
+        meet = (edits or {}).get("meet_link")
+        if isinstance(meet, str) and meet.strip():
+            if not actions.valid_meet_link(meet):
+                raise ValueError("not_approvable: meet_link must look like https://meet.google.com/abc-defg-hij")
+            changes["meet_link"] = meet.strip()
         if changes.get("due_at") and actions._parse_ts(changes["due_at"]) is None:
             raise ValueError("not_approvable: due_at must be ISO 8601 with a time zone")
         merged = dict(followup, **changes)

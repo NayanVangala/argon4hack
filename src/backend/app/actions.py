@@ -15,6 +15,7 @@ logged or stored.
 
 import json
 import os
+import re
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -29,6 +30,14 @@ ARGON_MODEL = os.environ.get("SCENE_ARGON_MODEL", "gemini-4-argon")
 ACTION_TYPES = ("email", "reply", "calendar", "todo")
 _ENDPOINT = ("https://generativelanguage.googleapis.com/v1beta/models/"
              "%s:generateContent")
+
+
+_MEET_RE = re.compile(r"https://meet\.google\.com/[a-z]{3}-[a-z]{4}-[a-z]{3}(\?[\w=&%.-]*)?")
+
+
+def valid_meet_link(value):
+    """A real Meet room link looks like https://meet.google.com/abc-defg-hij."""
+    return isinstance(value, str) and bool(_MEET_RE.fullmatch(value.strip())) and "\n" not in value.strip()
 
 
 class ActionError(Exception):
@@ -144,12 +153,14 @@ Rules:
 - For email and reply, write "draft": 2 to 4 short, friendly, plain sentences
   from the wearer. Do not claim work is done or attachments exist.
 - For calendar, set "duration_min" if a length was said, else 30.
+- Set "video_call": true when the meeting or call is remote (mentions a call,
+  video, online, virtual, Meet, Zoom or Teams), else false.
 - Keep "title" short (under 10 words). Do not invent tasks.
 
 Return ONLY this JSON:
 {{"tasks": [{{"action_type": "email|reply|calendar|todo", "title": "...",
   "person": "...", "recipient": null, "due_at": null, "duration_min": null,
-  "changed_from": null, "quote": "...", "line_id": "L1", "draft": "..."}}]}}
+  "video_call": false, "changed_from": null, "quote": "...", "line_id": "L1", "draft": "..."}}]}}
 
 Transcript lines:
 {lines}
@@ -194,6 +205,7 @@ def extract_actions(scenes):
             "recipient": recipient,
             "due_at": due,
             "duration_min": duration,
+            "video_call": bool(raw.get("video_call")) and action_type == "calendar",
             "changed_from": (str(raw["changed_from"])[:200]
                              if raw.get("changed_from") else None),
             "quote": quote,
@@ -214,13 +226,16 @@ def build_action(followup):
     title = followup.get("title") or followup.get("promise") or "Follow-up"
     if action_type in ("email", "reply"):
         subject = ("Re: " if action_type == "reply" else "") + title
+        body = followup.get("draft") or ""
+        if valid_meet_link(followup.get("meet_link")):
+            body += "\n\nJoin on Google Meet: " + followup["meet_link"].strip()
         query = urllib.parse.urlencode(
-            {"subject": subject, "body": followup.get("draft") or ""},
+            {"subject": subject, "body": body},
             quote_via=urllib.parse.quote)
         to = urllib.parse.quote(followup.get("recipient") or "", safe="@.+-_")
         gmail = "https://mail.google.com/mail/?" + urllib.parse.urlencode({
             "view": "cm", "fs": "1", "to": followup.get("recipient") or "",
-            "su": subject, "body": followup.get("draft") or ""})
+            "su": subject, "body": body})
         return {"action_url": "mailto:%s?%s" % (to, query),
                 "web_action_url": gmail,
                 "execution_status": "draft_ready_user_must_send"}
@@ -230,10 +245,15 @@ def build_action(followup):
             return {"action_url": None,
                     "execution_status": "needs_time"}
         end = start + timedelta(minutes=followup.get("duration_min") or 30)
-        url = "https://calendar.google.com/calendar/render?" + urllib.parse.urlencode({
-            "action": "TEMPLATE", "text": title,
-            "dates": _gcal_stamp(start) + "/" + _gcal_stamp(end),
-            "details": "From Scene. Said: \"%s\"" % (followup.get("quote") or "")})
+        details = "From Scene. Said: \"%s\"" % (followup.get("quote") or "")
+        params = {"action": "TEMPLATE", "text": title,
+                  "dates": _gcal_stamp(start) + "/" + _gcal_stamp(end)}
+        meet = (followup.get("meet_link") or "").strip()
+        if valid_meet_link(meet):
+            params["location"] = meet
+            details += "\n\nJoin on Google Meet: " + meet
+        params["details"] = details
+        url = "https://calendar.google.com/calendar/render?" + urllib.parse.urlencode(params)
         return {"action_url": url, "web_action_url": url,
                 "execution_status": "calendar_form_ready_user_must_save"}
     if action_type == "todo":

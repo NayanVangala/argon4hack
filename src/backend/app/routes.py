@@ -616,7 +616,10 @@ def create_handler(store, ingest, ask, followthrough, broadcaster=None):
                             return self._send_json(200, dict(result, status="approved"))
                     else:
                         result = self._followthrough.dismiss_followup(fid)
-                except ValueError:
+                except ValueError as exc:
+                    detail = str(exc)
+                    if detail.startswith("not_approvable: "):
+                        return self._error(400, "not_approvable", detail[16:])
                     return self._error(400, "not_approvable",
                                        "Unverified drafts are never approved; "
                                        "they stay under needs_review.")
