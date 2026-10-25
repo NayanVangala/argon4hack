@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<false/>
+	</dict>
+	<key>UILaunchStoryboardName</key>
+	<string>LaunchScreen</string>
+	<!-- Usage descriptions: DAT needs Bluetooth; the app itself needs mic for chunk audio. -->
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>Scene connects to your Meta AI glasses over Bluetooth to stream video and audio.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Scene streams the glasses camera to build your memory timeline.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Scene records audio from your glasses to transcribe conversations.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Scene looks for your glasses and backend on the local network.</string>
+	<!-- VERIFY: DAT Bonjour service types for the MWDAT SoftAP path. Fill in from the DAT docs before shipping. -->
+	<key>NSBonjourServices</key>
+	<array/>
+	<!-- VERIFY: exact MWDAT key names. MetaAppID per the DAT integration cookbook; Analytics/CrashReporting opt-outs per the official README. -->
+	<key>MWDAT</key>
+	<dict>
+		<key>MetaAppID</key>
+		<string>YOUR_META_APP_ID</string>
+		<key>AppLinkURLScheme</key>
+		<string>scene-bridge</string>
+		<key>Analytics</key>
+		<dict>
+			<key>OptOut</key>
+			<true/>
+		</dict>
+		<key>CrashReporting</key>
+		<dict>
+			<key>OptOut</key>
+			<true/>
+		</dict>
+	</dict>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>bluetooth-peripheral</string>
+		<string>external-accessory</string>
+	</array>
+	<key>UISupportedExternalAccessoryProtocols</key>
+	<array>
+		<string>com.meta.ar.wearable</string>
+	</array>
+	<!-- VERIFY: URL scheme for the Meta AI registration callback. The .onOpenURL handler gates on the metaWearablesAction query item; confirm the scheme Meta AI expects. -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>scene-bridge</string>
+			</array>
+		</dict>
+	</array>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>fb-viewapp</string>
+	</array>
+</dict>
+</plist>
