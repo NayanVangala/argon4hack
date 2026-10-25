@@ -24,7 +24,7 @@ struct SessionView: View {
 
                 VStack(spacing: 14) {
                     Button {
-                        withAnimation(Springs.pop) { store.isRecording.toggle() }
+                        Task { await store.setRecording(!store.isRecording) }
                     } label: {
                         ZStack {
                             // Breathing ring while recording (spec §6.5)
@@ -48,6 +48,7 @@ struct SessionView: View {
                         }
                     }
                     .buttonStyle(SquishStyle())
+                    .animation(Springs.pop, value: store.isRecording)
                     .sensoryFeedback(.impact(weight: .heavy), trigger: store.isRecording)
                     .accessibilityLabel(store.isRecording ? "Stop recording" : "Start recording")
 
@@ -98,7 +99,7 @@ struct SessionView: View {
         }
         .confirmationDialog("Wipe the day. No blocks left behind.", isPresented: $confirmWipe, titleVisibility: .visible) {
             Button("Wipe it", role: .destructive) {
-                store.wipe()
+                Task { await store.wipe() }
                 wipeCount += 1
             }
             Button("Keep", role: .cancel) {}

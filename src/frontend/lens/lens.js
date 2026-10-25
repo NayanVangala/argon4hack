@@ -72,6 +72,19 @@ async function ask(query) {
   try { return await api('/api/v1/ask', { method: 'POST', body: JSON.stringify({ query }) }); }
   catch { return { answer: "Can't reach your memory right now.", receipts: [] }; }
 }
+// Recording state comes from the server (the lens "Now" screen only shows while recording)
+async function loadStatus() {
+  if (CONFIG.useMock) return;
+  try {
+    const st = await api('/api/v1/status');
+    state.recording = !!st.recording;
+    state.sessionId = st.session_id || state.sessionId;
+  } catch {}
+}
+async function endSession() {
+  if (CONFIG.useMock || !state.sessionId) return;
+  try { await api('/api/v1/sessions/' + encodeURIComponent(state.sessionId) + '/end', { method: 'POST', body: '{}' }); } catch {}
+}
 async function pin(sceneId) {
   if (CONFIG.useMock) return;
   try { await api('/api/v1/pin', { method: 'POST', body: JSON.stringify(sceneId ? { scene_id: sceneId } : {}) }); } catch {}
@@ -197,6 +210,7 @@ async function activate(el) {
   if (action === 'keep') show('now');
   if (action === 'stop') {
     state.recording = false;
+    endSession();   // tell the server to stop the session
     show('dark');
     $('toast').classList.add('show');
     setTimeout(() => $('toast').classList.remove('show'), 2000);
@@ -275,6 +289,10 @@ function connectLive() {
     ws.onmessage = (m) => {
       try {
         const { event, scene } = JSON.parse(m.data);
+        if (event === 'status' && typeof m === 'object') {
+          const st = JSON.parse(m.data);
+          if (typeof st.recording === 'boolean') state.recording = st.recording;
+        }
         if (event === 'scene' && scene) {
           scene.id = scene.id || scene.scene_id;   // spec uses both names
           state.scenes = [scene, ...state.scenes.filter(x => x.id !== scene.id)];   // newest first, no duplicates
@@ -290,7 +308,8 @@ function connectLive() {
 // ---- Start -------------------------------------------------------------------
 (async function start() {
   state.scenes = await loadScenes();
-  show('now');
+  await loadStatus();
+  show('now');   // falls back to Timeline when not recording
   setInterval(() => { if (state.screen === 'now') $('clock').textContent = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); }, 15000);
   connectLive();
 })();

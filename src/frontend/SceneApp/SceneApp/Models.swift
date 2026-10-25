@@ -68,6 +68,13 @@ nonisolated struct StatusInfo: Codable, Hashable {
     var sceneCount: Int
     var lastSceneTs: Date?
     var spendUsd: Double?   // API gap: spend in /status
+    var sessionId: String?
+}
+
+nonisolated struct SessionInfo: Codable {
+    let id: String
+    var startedAt: Date?
+    var status: String?
 }
 
 struct Person: Identifiable, Hashable {

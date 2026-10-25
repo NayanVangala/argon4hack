@@ -26,7 +26,7 @@ struct LiveView: View {
                 Text("SCENE \(store.scenes.count)").font(Theme.mono(13)).foregroundStyle(.white.opacity(0.6))
                 Spacer()
                 Button {
-                    withAnimation(Springs.snappy) { store.isRecording.toggle() }
+                    Task { await store.setRecording(!store.isRecording) }
                 } label: {
                     Text(store.isRecording ? "End" : "Start")
                         .font(Theme.title(15))

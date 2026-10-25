@@ -146,10 +146,10 @@ struct MiniStrip: View {
     let scenes: [SceneItem]
     var body: some View {
         HStack(spacing: 4) {
-            ForEach(scenes) { s in
+            ForEach(scenes.suffix(24)) { s in   // most recent part of the day
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
                     .fill(s.blockColor)
-                    .frame(width: max(10, s.blockWidth / 4), height: 30)
+                    .frame(width: max(8, s.blockWidth / 6), height: 30)
             }
             Spacer(minLength: 0)
         }

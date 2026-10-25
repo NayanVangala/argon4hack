@@ -7,7 +7,16 @@ import Observation
 final class AppStore {
     // Change these in the app: Session tab → Developer (saved on the phone, not in the repo)
     var useMock = UserDefaults.standard.object(forKey: "useMock") as? Bool ?? true {
-        didSet { UserDefaults.standard.set(useMock, forKey: "useMock") }
+        didSet {
+            UserDefaults.standard.set(useMock, forKey: "useMock")
+            // Switching data sources: never show the other source's leftovers
+            scenes = []
+            pinned = []
+            followups = []
+            followupStep = -1
+            lastError = nil
+            wipedBefore = nil
+        }
     }
     var baseURL = UserDefaults.standard.string(forKey: "baseURL") ?? "http://localhost:8000" {
         didSet { UserDefaults.standard.set(baseURL, forKey: "baseURL") }
@@ -36,6 +45,9 @@ final class AppStore {
         max(0, (stoppedAt ?? now).timeIntervalSince(sessionStart))
     }
     var spendUsd: Double? = nil
+    var sessionId: String? = nil
+    /// API gap: there is no delete endpoint yet, so a wipe hides everything before this time.
+    var wipedBefore: Date? = nil
     var lastError: String? = nil
     var pendingQuery: String? = nil
 
@@ -52,10 +64,12 @@ final class AppStore {
             // Oldest → newest for the timeline; empty quotes count as no quote
             scenes = page.scenes
                 .map { var x = $0; if x.quote?.isEmpty == true { x.quote = nil }; return x }
+                .filter { scene in wipedBefore.map { scene.startTs > $0 } ?? true }
                 .sorted { $0.startTs < $1.startTs }
             let status: StatusInfo = try await get("/api/v1/status")
             isRecording = status.recording
             spendUsd = status.spendUsd
+            if let id = status.sessionId { sessionId = id }
             lastError = nil
         } catch {
             lastError = "Couldn't reach the backend: \(error.localizedDescription)"
@@ -81,11 +95,36 @@ final class AppStore {
         _ = try? await send("/api/v1/pin", body: ["scene_id": scene.id])
     }
 
-    func wipe() {
-        // API gap: no wipe endpoint yet. Clears the local view for now.
+    /// Start or stop recording. On a server this starts/ends a real session (POST /sessions, /sessions/{id}/end).
+    func setRecording(_ on: Bool) async {
+        if useMock {
+            isRecording = on
+            return
+        }
+        do {
+            if on {
+                let session: SessionInfo = try await post("/api/v1/sessions", body: [:])
+                sessionId = session.id
+                isRecording = true
+            } else {
+                if let id = sessionId {
+                    try await send("/api/v1/sessions/\(id)/end", body: [:])
+                }
+                isRecording = false
+            }
+            lastError = nil
+        } catch {
+            lastError = "Couldn't \(on ? "start" : "stop") recording: \(error.localizedDescription)"
+        }
+    }
+
+    func wipe() async {
+        // API gap: the backend has no delete endpoint yet. This stops recording and hides
+        // everything up to now in the app, but the data still exists on the server.
+        wipedBefore = Date()
         scenes = []
         pinned = []
-        isRecording = false
+        if isRecording { await setRecording(false) }
     }
 
     // MARK: Follow-through agent (POST /followups/generate → poll GET /followups)

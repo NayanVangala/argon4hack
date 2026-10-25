@@ -212,5 +212,6 @@ extension SceneItem {
         default: return Theme.greyBlue
         }
     }
-    var blockWidth: CGFloat { CGFloat(min(140, max(30, minutes * 9))) }
+    /// Longer scenes get wider blocks, but every block is wide enough to tap and to show its time.
+    var blockWidth: CGFloat { CGFloat(min(140, max(64, minutes * 9))) }
 }

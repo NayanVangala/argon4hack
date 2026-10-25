@@ -85,6 +85,13 @@ struct MemoryView: View {
         )
         }
         .onAppear { appeared = true }
+        // When connected to a server, pick up new scenes on their own (no pull-to-refresh needed)
+        .task {
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 15_000_000_000)
+                if !store.useMock { await store.loadToday() }
+            }
+        }
         .sensoryFeedback(.impact(weight: .light), trigger: opened)
         .sheet(item: $opened) { scene in
             SceneDetailView(scene: scene) { question in
@@ -121,7 +128,7 @@ struct TimelineStrip: View {
                 ForEach(Array(scenes.enumerated()), id: \.element.id) { index, s in
                     Button { onTap(s) } label: {
                         VStack(alignment: .leading, spacing: 8) {
-                            Text(s.blockWidth >= 60 ? s.startTs.clock : " ")
+                            Text(s.startTs.clock)
                                 .font(Theme.mono(11))
                                 .foregroundStyle(.white.opacity(0.6))
                                 .lineLimit(1)
@@ -152,6 +159,7 @@ struct TimelineStrip: View {
             .padding(.horizontal, 20)
             .padding(.vertical, 16)
         }
+        .defaultScrollAnchor(.trailing)   // open on the newest scenes
         .background(Theme.trueBlack)
     }
 }
