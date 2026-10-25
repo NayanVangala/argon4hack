@@ -150,8 +150,9 @@ def make_mock_services():
 # - SceneAnalyzer.analyze(keyframe_paths) -> {summary, objects[],
 #   people[{name, confidence}], actions[], visible_text[], type,
 #   confidence}. ONE Argon interactions.create call per chunk, over up
-#   to ~6 keyframes sampled evenly, existing local files only
-#   ("mock://" placeholders skipped). Zero real frames -> mock draft,
+#   to 30 dense frames (1 fps, chronological; sampled down only if
+#   more arrive), existing local files only ("mock://" placeholders
+#   skipped). Zero real frames -> mock draft,
 #   never a fabricated scene. The analyzer describes, it does not
 #   identify: people names are forced to "Unknown" and confidence is
 #   capped at "review" (only the Attributor can verify a name).
@@ -404,8 +405,10 @@ class FasterWhisperTranscriber(Transcriber):
 
 
 class ArgonSceneAnalyzer(SceneAnalyzer):
-    """Argon scene analysis over up to ~6 keyframes, one Interactions
-    call per chunk, thinking_level low.
+    """Argon scene analysis over up to 30 dense frames (1 fps,
+    chronological), one Interactions call per chunk, thinking_level
+    low. Frames beyond max_frames are evenly sampled down by
+    _sample_frames; ingest normally supplies at most 30.
 
     Only existing local files are passed; "mock://" placeholder paths
     are skipped. Zero real frames -> mock draft (never a fabricated
@@ -415,7 +418,7 @@ class ArgonSceneAnalyzer(SceneAnalyzer):
     capped at "review" (verification is the Attributor's job).
     """
 
-    def __init__(self, thinking_level="low", max_frames=6):
+    def __init__(self, thinking_level="low", max_frames=30):
         self.thinking_level = thinking_level
         self.max_frames = max_frames
 
@@ -435,10 +438,8 @@ class ArgonSceneAnalyzer(SceneAnalyzer):
         frames = self._sample_frames(self._real_frames(keyframe_paths))
         if not frames:
             logger.warning(
-                "ArgonSceneAnalyzer: zero real keyframes (placeholders "
-                "only); returning mock draft. KNOWN GAP: ingest "
-                "_extract_keyframes still returns a mock:// placeholder, "
-                "so this path is expected until ingest extracts frames.")
+                "ArgonSceneAnalyzer: zero real frames (placeholders "
+                "only); returning mock draft.")
             return _mock_draft()
         if not _has_gemini_key():
             logger.warning(
@@ -446,17 +447,24 @@ class ArgonSceneAnalyzer(SceneAnalyzer):
                 "environment; returning mock draft.")
             return _mock_draft()
         prompt = (
-            "Describe what is happening in these keyframes from one "
-            "continuous scene. Reply with JSON ONLY, no other text, "
-            "with exactly these keys: summary (string), objects "
-            "(list of strings), people (list of {name, confidence} "
-            "objects; use name \"Unknown\" for every person, you must "
-            "not identify anyone), actions (list of strings), "
+            "You are given a SEQUENCE of frames from one continuous "
+            "30-second scene, in chronological order, one frame per "
+            "second (frame 1 is the first second, frame 30 the last). "
+            "Reason over the sequence in order, not over any single "
+            "frame: track motion and actions as they unfold, who "
+            "enters or leaves the view, handoffs of objects between "
+            "people, and how the scene changes over time. Reply with "
+            "JSON ONLY, no other text, with exactly these keys: "
+            "summary (string, one or two sentences covering the whole "
+            "sequence), objects (list of strings), people (list of "
+            "{name, confidence} objects; use name \"Unknown\" for "
+            "every person, you must not identify anyone), actions "
+            "(list of strings, in the order they happen), "
             "visible_text (list of strings), type (string, e.g. "
             "conversation), confidence (one of verified, review, "
             "silence; use review unless the scene is silent). "
-            "Describe only what is visible; do not invent people, "
-            "objects, or dialogue."
+            "Describe only what is visible across the sequence; do "
+            "not invent people, objects, or dialogue."
         )
         try:
             interaction = _argon_interaction(

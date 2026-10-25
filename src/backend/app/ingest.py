@@ -58,6 +58,9 @@ _KEYFRAME_FRACTIONS = (0.10, 0.25, 0.40, 0.55, 0.70, 0.85)
 _KEYFRAME_FALLBACK_DURATION_S = 30.0
 _KEYFRAME_TIMEOUT_S = 15  # per ffmpeg seek-extract call
 _FFPROBE_TIMEOUT_S = 10
+_DENSE_FPS = 1  # dense path: one frame per second of chunk
+_DENSE_MAX_FRAMES = 30  # cap per chunk (30s chunk at 1fps)
+_DENSE_TIMEOUT_S = 60  # one ffmpeg call for the whole chunk
 
 
 def _all_pass_critique():
@@ -98,12 +101,25 @@ class IngestPipeline:
     def _delete_keyframes(keyframes):
         """Delete real local frame temp files; mock:// paths are a
         no-op (never passed to os.remove). Failures are ignored: a
-        cleanup miss must never crash the pipeline."""
+        cleanup miss must never crash the pipeline. Dense-frame temp
+        dirs (scene-dense-*) are removed too once empty, so the
+        single-ffmpeg dense path leaks neither files nor dirs."""
+        parents = []
         for path in keyframes or []:
             if not path or str(path).startswith("mock://"):
                 continue
             try:
                 os.remove(str(path))
+            except OSError:
+                pass
+            parent = os.path.dirname(str(path))
+            if parent and parent not in parents:
+                parents.append(parent)
+        for parent in parents:
+            if not os.path.basename(parent).startswith("scene-dense-"):
+                continue
+            try:
+                os.rmdir(parent)  # only succeeds when empty
             except OSError:
                 pass
 
@@ -179,6 +195,76 @@ class IngestPipeline:
                 "to mock placeholder", exc)
             return list(_MOCK_KEYFRAMES)
 
+    def _extract_dense_frames(self, video_path):
+        """Dense temporal frames: 1 fps, capped at 30 frames, one
+        ffmpeg call, frames downscaled to fit a 768x768 box (one
+        Gemini tile each at 258 tokens) at the same JPEG quality as
+        the 6-frame path.
+
+        Never raises: on any failure (ffmpeg missing, bad/unreadable
+        video, zero frames) partial files and the temp dir are
+        deleted, one log line is emitted, and [] is returned so the
+        caller can fall back to the 6-frame path. On success the
+        caller owns the files: _run_once deletes them (and their
+        temp dir, via _delete_keyframes) in its finally, exactly
+        like the 6-frame path."""
+        tmpdir = None
+        frames = []
+        try:
+            if not video_path or not os.path.isfile(str(video_path)):
+                return []
+            if shutil.which("ffmpeg") is None:
+                logger.warning(
+                    "[ingest] dense extraction skipped: ffmpeg not "
+                    "found on PATH")
+                return []
+            tmpdir = tempfile.mkdtemp(prefix="scene-dense-")
+            pattern = os.path.join(tmpdir, "frame-%03d.jpg")
+            try:
+                result = subprocess.run(
+                    ["ffmpeg", "-y", "-i", str(video_path),
+                     "-vf",
+                     "fps=%d,scale=768:768:force_original_aspect_ratio=decrease" % _DENSE_FPS,
+                     "-frames:v", str(_DENSE_MAX_FRAMES),
+                     "-q:v", "2", pattern],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    timeout=_DENSE_TIMEOUT_S)
+            except subprocess.SubprocessError:
+                result = None
+            if result is None or result.returncode != 0:
+                raise RuntimeError("ffmpeg dense extraction failed")
+            frames = sorted(
+                f for f in
+                (os.path.join(tmpdir, name)
+                 for name in os.listdir(tmpdir))
+                if f.endswith(".jpg") and os.path.isfile(f)
+                and os.path.getsize(f) > 0)
+            if not frames:
+                raise RuntimeError("ffmpeg extracted zero dense frames")
+            return frames
+        except Exception as exc:  # noqa: BLE001 - fallback, never raise
+            self._delete_keyframes(frames)
+            if tmpdir:
+                try:
+                    shutil.rmtree(tmpdir, ignore_errors=True)
+                except OSError:
+                    pass
+            logger.warning(
+                "[ingest] dense frame extraction failed (%s), falling "
+                "back to 6-frame path", exc)
+            return []
+
+    def _extract_frames(self, video_path):
+        """Frame set for one chunk: dense 1fps frames first, the
+        6-frame path on dense failure, the mock placeholder if that
+        also fails (_extract_keyframes never raises and returns the
+        placeholder itself). Never raises."""
+        frames = self._extract_dense_frames(video_path)
+        if frames:
+            return frames
+        return self._extract_keyframes(video_path)
+
     def _backfill_timestamps(self, segments, start_ts, end_ts):
         """Fill missing segment/word timestamps from the chunk window.
 
@@ -202,9 +288,10 @@ class IngestPipeline:
                   audio_path):
         """One attempt at the transcribe -> store steps. Raises on
         failure so the caller can retry."""
-        # Real keyframes (~6 evenly spaced JPEGs); mock placeholder
-        # only when extraction fails. Deleted in the finally below.
-        keyframes = self._extract_keyframes(video_path)
+        # Dense 1fps frames when extraction works; the 6-frame path,
+        # then the mock placeholder, on failure. Deleted in the
+        # finally below.
+        keyframes = self._extract_frames(video_path)
 
         try:
             # Transcribe first, so a quote exists even if analysis degrades.

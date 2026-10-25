@@ -5,8 +5,13 @@
 # Auth (routes.py check_auth) and the MCP stdio transport
 # (app/mcp_stdio.py) are stdlib-only and need nothing here.
 #
-# Postgres / ChromaDB / vector-store dependencies belong to the data
-# orchestrator's scope, not this file.
+# ChromaDB / vector-store dependencies are optional (vector_store.py
+# degrades silently when chromadb is absent).
+#
+# Postgres (Cloud SQL): psycopg v3 binary, required for SCENE_STORE=postgres
+# (local and Cloud SQL). Must be v3 [binary]; psycopg2 will NOT work.
+# Pin to the version installed on the Mac.
+psycopg[binary]>=3.1
 
 # Argon via the Interactions API (google-genai >= 2.3.0 per the official
 # builder guide). Verified working at 2.33.0. Reads GEMINI_API_KEY (or
