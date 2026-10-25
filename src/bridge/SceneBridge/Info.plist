@@ -43,9 +43,9 @@
 	<key>MWDAT</key>
 	<dict>
 		<key>MetaAppID</key>
-		<string>YOUR_META_APP_ID</string>
+		<string>0</string>
 		<key>AppLinkURLScheme</key>
-		<string>scene-bridge</string>
+		<string>scene-bridge://</string>
 		<key>Analytics</key>
 		<dict>
 			<key>OptOut</key>
