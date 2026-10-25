@@ -7,7 +7,7 @@ struct SessionView: View {
     @State private var glow = false
 
     private var statsLine: String {
-        let elapsed = Date().timeIntervalSince(store.sessionStart)
+        let elapsed = store.elapsed()
         let h = Int(elapsed) / 3600
         let m = (Int(elapsed) % 3600) / 60
         return "\(h)H \(m)M · \(store.scenes.count) BLOCKS · 0 GAPS"

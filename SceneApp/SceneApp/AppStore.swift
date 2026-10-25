@@ -12,8 +12,24 @@ final class AppStore {
     var scenes: [SceneItem] = []
     var people: [Person] = MockData.people
     var pinned: Set<String> = []
-    var isRecording = true
+    var isRecording = true {
+        didSet {
+            guard oldValue != isRecording else { return }
+            if isRecording {
+                sessionStart = Date()   // a new recording starts the timer from zero
+                stoppedAt = nil
+            } else {
+                stoppedAt = Date()      // freeze the timer when recording stops
+            }
+        }
+    }
     var sessionStart = Date().addingTimeInterval(-(2 * 3600 + 14 * 60))
+    var stoppedAt: Date? = nil
+
+    /// How long this session has been recording (stops counting when recording stops).
+    func elapsed(at now: Date = Date()) -> TimeInterval {
+        max(0, (stoppedAt ?? now).timeIntervalSince(sessionStart))
+    }
     var spendUsd: Double? = nil
     var lastError: String? = nil
     var pendingQuery: String? = nil

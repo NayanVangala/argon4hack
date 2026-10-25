@@ -23,6 +23,8 @@ struct ContentView: View {
         }
         .background(Theme.paper.ignoresSafeArea())
         .environment(store)
+        // App is designed light; Live is dark so its status bar turns white
+        .preferredColorScheme(tab == .live ? .dark : .light)
         .task { await store.loadToday() }
     }
 }

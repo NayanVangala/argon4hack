@@ -15,7 +15,7 @@ struct MemoryView: View {
     private var statsLine: String {
         let date = Date().formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()).uppercased()
         let people = Set(store.scenes.compactMap { $0.speaker }).count
-        let elapsed = Date().timeIntervalSince(store.sessionStart)
+        let elapsed = store.elapsed()
         let h = Int(elapsed) / 3600
         let m = (Int(elapsed) % 3600) / 60
         return "\(date) · \(store.scenes.count) BLOCKS · \(people) PEOPLE · \(h)H \(m)M"

@@ -102,7 +102,7 @@ struct LiveView: View {
     }
 
     private func elapsed(at date: Date) -> String {
-        let total = max(0, Int(date.timeIntervalSince(store.sessionStart)))
+        let total = Int(store.elapsed(at: date))
         let h = total / 3600, m = (total % 3600) / 60, s = total % 60
         return h > 0 ? String(format: "%d:%02d:%02d", h, m, s) : String(format: "%02d:%02d", m, s)
     }
