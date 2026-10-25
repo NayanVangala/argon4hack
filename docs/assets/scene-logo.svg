@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Concept 1: The Resolved Overlap -->
+  <!-- Combining two offset, rotated rectangles into one precise central shape -->
+  <path d="M42.5 16.2L21.5 24.8L16.2 42.5L24.8 21.5L42.5 16.2Z" fill="#175CD3"/>
+  <path d="M47.8 21.5L26.8 30.1L21.5 47.8L30.1 26.8L47.8 21.5Z" fill="#175CD3"/>
+</svg>
