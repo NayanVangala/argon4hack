@@ -1,0 +1,26 @@
+# Real services dependencies (services + API layer only).
+#
+# Install on the Mac with:  pip install -r requirements.txt
+#
+# Auth (routes.py check_auth) and the MCP stdio transport
+# (app/mcp_stdio.py) are stdlib-only and need nothing here.
+#
+# Postgres / ChromaDB / vector-store dependencies belong to the data
+# orchestrator's scope, not this file.
+
+# Argon via the Interactions API (google-genai >= 2.3.0 per the official
+# builder guide). Verified working at 2.33.0. Reads GEMINI_API_KEY (or
+# GOOGLE_API_KEY) from the environment; no key -> services degrade to
+# the existing mocks with a clear log line.
+google-genai>=2.3.0
+
+# Whisper transcription (faster-whisper + ctranslate2). Deliberately
+# unpinned: the install failed in this VM on disk space (Errno 28), so
+# pin the version that installs on the Mac and record it here. The
+# model itself downloads on first transcribe (WHISPER_MODEL, default
+# "base"; WHISPER_DEVICE default "cpu", WHISPER_COMPUTE_TYPE "int8").
+faster-whisper
+
+# NOT included, by design: real face+voice fusion is a documented stub
+# (FaceVoiceAttributor). When fusion is built, add insightface /
+# onnxruntime (ArcFace) and speechbrain / torch (ECAPA) here.
