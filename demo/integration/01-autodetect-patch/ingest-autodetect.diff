@@ -1,0 +1,167 @@
+*** RE-VERIFY WARNING (see PATCH.md, top of guide) ***
+*** Based on ~/workspace/scene-backend/app/ingest.py (workspace copy). ***
+*** Diff the _run_once plug point against the CURRENT repo backend ***
+*** (src/backend/app/ingest.py, Srijan changes pending Claude audit) ***
+*** before applying. Do NOT apply blindly to the running backend. ***
+*** Apply by anchor text, not line numbers; line numbers will shift. ***
+*** Step 0: copy autodetect.py into the backend package as ***
+*** app/autodetect.py (next to ingest.py) before applying Hunk 1. ***
+
+--- a/app/ingest.py
++++ b/app/ingest.py
+@@ Hunk 1: guarded import, next to the critic import at the top of ingest.py
+ try:
+     from .critic import critique_scene as _critic_scene
+ except ImportError:  # not a package import, or critic.py not built yet
+     try:
+         from critic import critique_scene as _critic_scene
+     except ImportError:
+         _critic_scene = None
++
++# Autodetect: stdlib-only post-transcription classifier. Missing module
++# must degrade to analyze-everything, never to a crashed chunk.
++try:
++    from .autodetect import detect as _detect
++    from .autodetect import words_from_segments as _words_from_segments
++except ImportError:
++    try:
++        from autodetect import detect as _detect
++        from autodetect import words_from_segments as _words_from_segments
++    except ImportError:
++        _detect = None
++        _words_from_segments = None
++        logger.warning(
++            "[ingest] autodetect module not found; "
++            "running analyze-everything (no chunk skipping)")
+
+--- a/app/ingest.py
++++ b/app/ingest.py
+@@ Hunk 2: exact call site in IngestPipeline._run_once,
+@@ after transcribe + timestamp backfill, before analyzer.analyze
+             # Transcribe first, so a quote exists even if analysis degrades.
+             segments = self.transcriber.transcribe(audio_path)
+             segments = self._backfill_timestamps(segments, start_ts, end_ts)
++
++            # Autodetect gate: post-transcription classification only.
++            # conversation/monologue -> analyze (unchanged path below).
++            # ambient/silent -> minimal scene, Argon call skipped.
++            # Any detector failure -> analyze. Never drop a chunk.
++            detection = self._detect_chunk(segments, start_ts, end_ts)
++            if detection is not None and detection.get("route") == "mark_and_skip":
++                return self._store_minimal_scene(
++                    session_id, start_ts, end_ts, segments, detection)
+ 
+             # Analyze, then attribute.
+             draft = self.analyzer.analyze(keyframes)
+
+--- a/app/ingest.py
++++ b/app/ingest.py
+@@ Hunk 3: new IngestPipeline helpers (add as methods of IngestPipeline,
+@@ e.g. right after _backfill_timestamps; full text in PATCH.md section 3)
++    @staticmethod
++    def _chunk_duration_s(start_ts, end_ts):
++        """Chunk window in seconds from the ISO strings routes.py passes.
++        Returns 30.0 on any parse failure or non-positive result."""
++        from datetime import datetime
++
++        def _parse(value):
++            if isinstance(value, (int, float)):
++                return float(value)
++            if isinstance(value, str):
++                try:
++                    return datetime.fromisoformat(value).timestamp()
++                except ValueError:
++                    return None
++            return None
++
++        start = _parse(start_ts)
++        end = _parse(end_ts)
++        if start is None or end is None:
++            return 30.0
++        duration = end - start
++        return duration if duration > 0 else 30.0
++
++    def _detect_chunk(self, segments, start_ts, end_ts):
++        """Run autodetect, or return None (= analyze) on any failure."""
++        if _detect is None or _words_from_segments is None:
++            return None
++        try:
++            transcript = "\n".join(seg.get("text", "") for seg in segments)
++            words = _words_from_segments(segments)
++            duration = self._chunk_duration_s(start_ts, end_ts)
++            return _detect(transcript, words, duration)
++        except Exception as exc:  # noqa: BLE001 - default is analyze
++            logger.warning("[ingest] autodetect failed (%s); "
++                           "defaulting to analyze", exc)
++            return None
++
++    def _store_minimal_scene(self, session_id, start_ts, end_ts,
++                             segments, detection):
++        """Store the minimal scene for a skipped chunk; return it stored."""
++        transcript = [{
++            "speaker": seg.get("speaker_label", "Unknown") or "Unknown",
++            "text": seg.get("text", ""),
++            "start_ts": seg.get("start_ts") or start_ts,
++            "end_ts": seg.get("end_ts") or end_ts,
++        } for seg in segments]
++        quote = transcript[0]["text"] if transcript else ""
++        label = detection.get("label", "")
++        scene = {
++            "session_id": session_id,
++            "start_ts": start_ts,
++            "end_ts": end_ts,
++            "summary": "No conversation detected",
++            "quote": quote,
++            "thumb_url": "",
++            "type": "conversation",
++            "verified": False,
++            "confidence": "silence" if label == "silent" else "review",
++            "objects": [],
++            "people": [],
++            "actions": [],
++            "visible_text": [],
++            "critique": [],
++            "transcript": transcript,
++            "keyframes": [],
++            "pinned": False,
++            "embedding_refs": None,
++            "detection_label": label,
++            "detection_confidence": detection.get("confidence"),
++            "detection_reasons": detection.get("reasons") or [],
++            "detection_route": detection.get("route"),
++            "detection_speech_seconds": detection.get("speech_seconds"),
++            "detection_word_count": detection.get("word_count"),
++            "detection_turn_count": detection.get("turn_count"),
++        }
++        scene["critique"] = _critique(scene)
++        stored = self.store.add_scene(scene)
++        scene_id = stored.get("id")
++        thumb_url = ("https://cdn.helloscene.xyz/t/%s.jpg" % scene_id
++                     if scene_id else "")
++        keyframe_urls = (["https://cdn.helloscene.xyz/k/%s/0.jpg" % scene_id]
++                         if scene_id else [])
++        try:
++            stored = self.store.update_scene(
++                scene_id, thumb_url=thumb_url, keyframes=keyframe_urls)
++        except (AttributeError, KeyError, TypeError):
++            stored["thumb_url"] = thumb_url
++            stored["keyframes"] = keyframe_urls
++        return stored
+
+--- a/app/ingest.py
++++ b/app/ingest.py
+@@ Hunk 4: spend branch in process_chunk, after a successful _run_once
+         # Store step, in order: spend once per chunk, then indexed.
+-        self.store.add_spend(_SPEND_PER_CHUNK_USD)
++        # Skipped chunks cost no Argon call, so they book $0.00.
++        # Full chunks book the existing flat figure, unchanged.
++        # NOTE: flat figure is $0.07, real Argon saving is ~$0.019;
++        # do NOT book a negative, do NOT quote $0.07 as cash saved.
++        if (stored_scene or {}).get("detection_route") == "mark_and_skip":
++            self.store.add_spend(0.00)
++        else:
++            self.store.add_spend(_SPEND_PER_CHUNK_USD)
+         self.store.update_chunk_status(chunk_id, "indexed")
+
+*** End of diff. Routing table, failure defaults, backfill interaction, ***
+*** spend discrepancy explanation, and retest checklist: see PATCH.md. ***
