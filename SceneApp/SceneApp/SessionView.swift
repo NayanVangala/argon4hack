@@ -89,6 +89,8 @@ struct SessionView: View {
                     .background(RoundedRectangle(cornerRadius: 28, style: .continuous).fill(Theme.pill))
                 }
                 .buttonStyle(SquishStyle())
+
+                DeveloperSection()
             }
             .padding(.horizontal, 20)
             .padding(.top, 12)
@@ -105,5 +107,52 @@ struct SessionView: View {
         }
         .sensoryFeedback(.impact(weight: .heavy), trigger: wipeCount)
         .onAppear { glow = true }
+    }
+}
+
+/// Switch between fake data and a real server without rebuilding the app.
+struct DeveloperSection: View {
+    @Environment(AppStore.self) private var store
+
+    var body: some View {
+        @Bindable var store = store
+        VStack(alignment: .leading, spacing: 12) {
+            Text("DEVELOPER").font(.system(size: 13, weight: .bold)).foregroundStyle(Theme.secondary)
+            Toggle(isOn: $store.useMock) {
+                Text("Use mock data").font(Theme.body(17)).foregroundStyle(Theme.ink)
+            }
+            .tint(Theme.accent)
+            if !store.useMock {
+                TextField("http://localhost:8000", text: $store.baseURL)
+                    .font(Theme.mono(15))
+                    .autocorrectionDisabled()
+                    #if os(iOS)
+                    .textInputAutocapitalization(.never)
+                    .keyboardType(.URL)
+                    #endif
+                    .padding(.horizontal, 14)
+                    .frame(height: 48)
+                    .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Theme.pill))
+            }
+            Button {
+                Task { await store.loadToday() }
+            } label: {
+                Text("Reload")
+                    .font(Theme.title(15))
+                    .foregroundStyle(Theme.paper)
+                    .padding(.horizontal, 18)
+                    .frame(height: 44)
+                    .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Theme.ink))
+            }
+            .buttonStyle(SquishStyle())
+            if let err = store.lastError {
+                Text(err).font(Theme.mono(12)).foregroundStyle(Theme.danger)
+            } else if !store.useMock {
+                Text("CONNECTED · \(store.scenes.count) SCENES").font(Theme.mono(12)).foregroundStyle(Theme.secondary)
+            }
+        }
+        .padding(16)
+        .background(RoundedRectangle(cornerRadius: 22, style: .continuous).strokeBorder(Theme.pill, lineWidth: 2))
+        .padding(.top, 12)
     }
 }

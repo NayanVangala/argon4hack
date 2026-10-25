@@ -194,10 +194,11 @@ struct ReceiptCard: View {
         receipt.displayConfidence == .verified ? "FACE + VOICE" : "VOICE ONLY"
     }
     private var receiptLine: String {
-        if receipt.displayConfidence == .verified, let s = receipt.speaker {
-            return "[\(s.uppercased()) · VERIFIED VERBATIM · \(receipt.timestamp)]"
+        if receipt.displayConfidence == .verified {
+            if let s = receipt.speaker { return "[\(s.uppercased()) · VERIFIED VERBATIM · \(receipt.displayTime)]" }
+            return "[VERIFIED VERBATIM · \(receipt.displayTime)]"
         }
-        return "[UNKNOWN SPEAKER · NOT VERIFIED · \(receipt.timestamp)]"
+        return "[UNKNOWN SPEAKER · NOT VERIFIED · \(receipt.displayTime)]"
     }
 }
 

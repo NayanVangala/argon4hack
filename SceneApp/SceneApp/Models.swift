@@ -36,10 +36,26 @@ nonisolated struct Receipt: Identifiable, Codable, Hashable {
     var speaker: String?
 
     var id: String { sceneId + timestamp }
+
+    /// Server sends ISO timestamps ("2026-10-25T09:15:00-07:00"); show them as "9:15 AM".
+    var displayTime: String {
+        let withFraction = ISO8601DateFormatter()
+        withFraction.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let d = ISO8601DateFormatter().date(from: timestamp) ?? withFraction.date(from: timestamp) {
+            return d.formatted(date: .omitted, time: .shortened)
+        }
+        return timestamp
+    }
     var displayConfidence: Confidence {
         if let c = confidence, let parsed = Confidence(rawValue: c.lowercased()) { return parsed }
         return .verified
     }
+}
+
+/// GET /scenes/today returns { "scenes": [...], "next_before": ... }
+nonisolated struct ScenesPage: Codable {
+    let scenes: [SceneItem]
+    let nextBefore: String?
 }
 
 nonisolated struct AskResponse: Codable, Hashable {

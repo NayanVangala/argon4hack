@@ -6,9 +6,15 @@
 // When Nayan's backend is up: useMock = false and set baseUrl. Never put a real token in the repo.
 const CONFIG = {
   useMock: true,
-  baseUrl: '',          // e.g. 'https://<backend>'  (TODO from Nayan)
+  baseUrl: '',          // e.g. 'http://localhost:8000'
   token: '',            // provided at runtime via QR pairing (spec §4.5), not hard-coded
 };
+// Point at a server without editing code: index.html?api=http://localhost:8000&token=...
+(function readUrlParams() {
+  const p = new URLSearchParams(location.search);
+  if (p.get('api')) { CONFIG.useMock = false; CONFIG.baseUrl = p.get('api').replace(/\/$/, ''); }
+  if (p.get('token')) CONFIG.token = p.get('token');
+})();
 
 // ---- Mock data (same shapes as the API, §4.5) --------------------------------
 function at(h, m) { const d = new Date(); d.setHours(h, m, 0, 0); return d.toISOString(); }
@@ -50,10 +56,12 @@ const store = {
 async function loadScenes() {
   if (CONFIG.useMock) return MOCK_SCENES;
   try {
-    const scenes = await api('/api/v1/scenes/today');
-    store.set('scenes', scenes);
+    const res = await api('/api/v1/scenes/today');
+    const list = Array.isArray(res) ? res : (res.scenes || []);   // server wraps it: { scenes, next_before }
+    list.forEach(x => { if (!x.quote) x.quote = null; });
+    store.set('scenes', list);
     setOffline(false);
-    return scenes.slice().sort((a, b) => b.start_ts.localeCompare(a.start_ts));
+    return list.slice().sort((a, b) => new Date(b.start_ts) - new Date(a.start_ts));
   } catch {
     setOffline(true);
     return store.get('scenes') || [];
@@ -73,6 +81,8 @@ async function pin(sceneId) {
 const state = { screen: 'now', scenes: [], recording: true, focusIndex: 0, lastAnswer: null };
 const $ = (id) => document.getElementById(id);
 const time = (iso) => new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+// Receipts may carry "2:14 PM" (mock) or an ISO timestamp (server)
+const showTime = (t) => (t && !isNaN(Date.parse(t)) && /T\d/.test(t)) ? time(t) : (t || '');
 const MAX_CARDS = 20;
 
 function setOffline(on) { state.offline = on; updateBanner(); }
@@ -99,7 +109,7 @@ function renderTimeline() {
     b.dataset.id = s.id;
     const thumb = document.createElement('span');
     thumb.className = 'thumb';
-    if (s.thumb_url) { const img = document.createElement('img'); img.src = s.thumb_url; img.alt = ''; thumb.appendChild(img); }
+    if (s.thumb_url) { const img = document.createElement('img'); img.src = s.thumb_url; img.alt = ''; img.onerror = () => img.remove(); thumb.appendChild(img); }
     else thumb.style.background = i % 2 ? 'var(--block-dim)' : 'var(--block)';
     const t = document.createElement('span'); t.className = 't';
     const title = document.createElement('b'); title.textContent = s.summary;
@@ -129,9 +139,9 @@ function renderAnswer(question, res) {
   $('receipt-badge').textContent = verified ? '✓ VERIFIED' : 'REVIEW';
   $('receipt-badge').classList.toggle('review', !verified);
   const who = r.speaker && verified ? r.speaker.toUpperCase() + ' · ' : (!verified ? 'UNKNOWN · ' : '');
-  $('receipt-who').textContent = who + r.timestamp;
+  $('receipt-who').textContent = who + showTime(r.timestamp);
   const thumb = $('receipt-thumb'); thumb.innerHTML = '';
-  if (r.thumb_url) { const img = document.createElement('img'); img.src = r.thumb_url; img.alt = ''; thumb.appendChild(img); }
+  if (r.thumb_url) { const img = document.createElement('img'); img.src = r.thumb_url; img.alt = ''; img.onerror = () => img.remove(); thumb.appendChild(img); }
 }
 
 // ---- Focus = the whole input model -----------------------------------------
