@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Scene | Follow-through</title>
+<style>
+:root{--blue:#175CD3;--ink:#0B0F19;--muted:#5B6475;--line:#E3E8F2;--soft:#F3F6FC}
+*{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,sans-serif;color:var(--ink);background:var(--soft)}
+.wrap{max-width:900px;margin:0 auto;padding:32px 20px 80px}h1{font-size:40px;margin:0;letter-spacing:-1px}h2{font-size:20px;margin:0 0 12px}
+.sub,.muted{color:var(--muted)}.card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:20px;margin-top:16px}
+textarea,input{width:100%;font:inherit;padding:10px;border:1px solid var(--line);border-radius:10px}textarea{min-height:120px}
+button,a.btn{font:600 15px Inter,system-ui,sans-serif;padding:11px 16px;border-radius:12px;border:1px solid var(--ink);background:#fff;color:var(--ink);cursor:pointer;text-decoration:none;display:inline-block}
+button.primary,a.btn{background:var(--blue);border-color:var(--blue);color:#fff}button:disabled{opacity:.5}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px}
+.task{border:1px solid var(--line);border-radius:14px;padding:16px;margin-top:12px;background:#fff}
+.pill{display:inline-block;font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;background:var(--soft);color:var(--blue);text-transform:uppercase;margin-right:6px}
+.warn{background:#FEF0C7;color:#93370D}.quote{border-left:3px solid var(--blue);background:var(--soft);padding:8px 10px;border-radius:6px;margin:8px 0}
+#err{color:#B42318;white-space:pre-wrap}.done{color:#05603A;font-weight:700}
+</style></head><body><div class="wrap">
+<h1>Scene follow-through</h1>
+<p class="sub">Everything Scene wants to do for you after a conversation. Nothing is sent until you approve it, and emails still need you to press Send.</p>
+
+<details class="card"><summary>Connection (only if the server needs a token)</summary>
+<input id="token" type="password" placeholder="Bearer token (leave blank if auth is off)"></details>
+
+<div class="card"><h2>Test without the glasses (optional)</h2>
+<p class="muted">Paste a conversation, one line per speaker as <b>Name: words</b>. It is saved into the current session like a glasses capture.</p>
+<textarea id="transcript"></textarea>
+<div class="row"><button id="sample">Load sample</button><button class="primary" id="save">Save conversation</button><span id="saved" class="muted"></span></div></div>
+
+<div class="card"><h2>Follow-ups</h2>
+<div class="row"><button class="primary" id="run">Find follow-ups in this session</button><span id="state" class="muted"></span></div>
+<p id="err"></p><div id="list"></div></div>
+
+<div class="card"><h2>To-do list</h2><ul id="todos"></ul></div>
+</div>
+<script>
+'use strict';
+const $=id=>document.getElementById(id);
+function el(tag,text,cls){const n=document.createElement(tag);if(text!=null)n.textContent=text;if(cls)n.className=cls;return n;}
+async function api(path,opts={}){const h={'Content-Type':'application/json'};const t=$('token').value.trim();if(t)h.Authorization='Bearer '+t;
+ const r=await fetch(path,{...opts,headers:h});let j={};try{j=await r.json();}catch{}
+ if(!r.ok)throw Error(j.error?.message||('HTTP '+r.status));return j;}
+function fail(e){$('err').textContent=e.message||String(e);}
+$('sample').onclick=()=>{$('transcript').value=['Srijan: Nayan, can you send me the pitch deck by 3 PM today?','Nayan: Yep, I will do that.','Srijan: Actually, change that to 2 PM today.','Nayan: Got it, 2 PM.','Srijan: Also, put a 20-minute check-in with Maya on the calendar for tomorrow at 10 AM.','Nayan: Okay.','Srijan: And send me the budget by Friday. Keep it under $500.','Nayan: I will send it by Friday, under $500.'].join('\n');};
+$('save').onclick=async()=>{$('err').textContent='';try{
+ const lines=$('transcript').value.split('\n').map(l=>l.trim()).filter(Boolean).map(l=>{const m=l.match(/^([^:]{1,80}):\s*(.+)$/);if(!m)throw Error('Each line must look like Name: words');return{speaker:m[1].trim(),text:m[2].trim()};});
+ if(!lines.length)throw Error('Paste a conversation first.');
+ await api('/api/v1/transcripts',{method:'POST',body:JSON.stringify({transcript:lines})});$('saved').textContent='Saved. Now find follow-ups.';}catch(e){fail(e);}};
+function due(t){if(!t.due_at)return 'No time given';const d=new Date(t.due_at);return isNaN(d)?t.due_at:d.toLocaleString([], {weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});}
+const LABEL={email:'Approve and open email draft',reply:'Approve and open reply draft',calendar:'Approve and open calendar',todo:'Add to my to-do list'};
+function render(items){$('list').replaceChildren();if(!items.length){$('list').append(el('p','No follow-ups found.','muted'));return;}
+ for(const t of items){const c=el('div',null,'task');
+  c.append(el('span',t.action_type||'follow-up','pill'));if(t.changed_from)c.append(el('span','changed from '+t.changed_from,'pill warn'));
+  c.append(el('h3',t.promise),el('div',(t.person||'Unknown')+' | '+due(t)+(t.recipient?' | to '+t.recipient:''),'muted'),el('div','"'+t.quote+'"','quote'));
+  let draft=null;if(t.action_type==='email'||t.action_type==='reply'){draft=el('textarea');draft.value=t.draft||'';c.append(draft);}
+  const row=el('div',null,'row');
+  if(t.status==='needs_review'){row.append(el('span','Quote not found in the saved conversation. Not offered for approval.','muted'));}
+  else if(t.status==='approved'){row.append(el('span','Approved','done'));if(t.web_action_url||t.action_url){const a=el('a',t.action_type==='calendar'?'Open calendar form':'Open draft','btn');a.href=t.web_action_url||t.action_url;a.target='_blank';a.rel='noopener';row.append(a);}}
+  else if(t.status==='dismissed'){row.append(el('span','Dismissed','muted'));}
+  else{const ok=el('button',LABEL[t.action_type]||'Approve','primary');const no=el('button','Dismiss');
+   ok.onclick=async()=>{const what=t.action_type==='todo'?'Add "'+t.promise+'" to your to-do list?':'Approve this '+(t.action_type||'follow-up')+'? It opens a draft. Nothing is sent until you press Send/Save there.';
+    if(!confirm(what))return;try{const out=await api('/api/v1/followups/'+t.id+'/approve',{method:'POST',body:JSON.stringify(draft?{draft:draft.value}:{})});
+     Object.assign(t,out);if(out.web_action_url||out.action_url){window.open(out.web_action_url||out.action_url,'_blank','noopener');}render(items);loadTodos();}catch(e){fail(e);}};
+   no.onclick=async()=>{try{await api('/api/v1/followups/'+t.id+'/dismiss',{method:'POST',body:'{}'});t.status='dismissed';render(items);}catch(e){fail(e);}};
+   row.append(ok,no);}
+  c.append(row);$('list').append(c);}}
+$('run').onclick=async()=>{$('err').textContent='';$('run').disabled=true;$('state').textContent='Argon is reading the conversation...';try{
+ const r=await api('/api/v1/followups/generate',{method:'POST',body:'{}'});const out=await api('/api/v1/followups?run_id='+encodeURIComponent(r.run_id));
+ render(out.followups||[]);$('state').textContent=(out.followups||[]).length+' follow-up(s). Review each one.';}catch(e){fail(e);$('state').textContent='';}finally{$('run').disabled=false;}};
+async function loadTodos(){try{const r=await api('/api/v1/todos');$('todos').replaceChildren(...(r.todos||[]).map(t=>el('li',t.promise+(t.due_at?' (by '+due(t)+')':''))));if(!(r.todos||[]).length)$('todos').append(el('li','Nothing yet.','muted'));}catch(e){}}
+loadTodos();
+</script></body></html>

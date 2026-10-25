@@ -20,6 +20,8 @@ import difflib
 import re
 from datetime import datetime
 
+from app import actions
+
 STEPS = ["find_promises", "verify_quotes", "draft_followups"]
 
 # Exact canned drafts from the old mock (server.py), field-for-field.
@@ -228,6 +230,19 @@ class FollowThroughService:
                 session_id = None
         run = self.store.create_followup_run(session_id)
         run_id = run.get("run_id") or run.get("id")
+        # Real path (Oct 25): Argon reads the session's transcripts and
+        # proposes emails / replies / calendar events / to-dos. Falls back
+        # to the canned drafts below only when no key is configured or
+        # the call fails, so the demo never hard-fails.
+        if actions.api_key():
+            try:
+                self._generate_real(run_id, session_id)
+                if hasattr(self.store, "update_followup_run_status"):
+                    self.store.update_followup_run_status(run_id, "done")
+                return {"run_id": run_id, "status": "running", "steps": list(STEPS)}
+            except actions.ActionError as exc:
+                print("FollowThrough: real extraction failed (%s); using canned drafts" % exc,
+                      flush=True)
         facts = self._find_promise_facts(session_id)
         scenes = self._session_scenes_oldest_first(session_id)
         by_id = {s.get("id"): s for s in scenes if s.get("id")}
@@ -256,6 +271,34 @@ class FollowThroughService:
             self.store.update_followup_run_status(run_id, "done")
         return {"run_id": run_id, "status": "running", "steps": list(STEPS)}
 
+    def _generate_real(self, run_id, session_id):
+        scenes = self._session_scenes_oldest_first(session_id)
+        tasks = actions.extract_actions(scenes)
+        by_id = {sc.get("id"): sc for sc in scenes if sc.get("id")}
+        for task in tasks:
+            scene = by_id.get(task.get("scene_id"))
+            verified, _ = verify_quote(task["quote"], scene) if scene else (False, 0.0)
+            if not verified:
+                # The model may cite the wrong line: accept any scene in
+                # this session whose transcript really contains the quote.
+                for candidate in scenes:
+                    ok, _ = verify_quote(task["quote"], candidate)
+                    if ok:
+                        verified, scene = True, candidate
+                        break
+            followup = dict(task)
+            followup.update({
+                "run_id": run_id,
+                "promise": task["title"],
+                "quote_verified": verified,
+                "verified_at": _now_iso() if verified else None,
+                "status": "pending" if verified else "needs_review",
+                "scene_id": scene.get("id") if scene else task.get("scene_id"),
+                "action_url": None,
+                "execution_status": "waiting_for_approval",
+            })
+            self.store.add_followup(followup)
+
     def list_followups(self, run_id=None, status=None):
         return {"followups": self.store.list_followups(run_id=run_id, status=status)}
 
@@ -274,7 +317,7 @@ class FollowThroughService:
             raise KeyError(followup_id)
         return followup
 
-    def approve_followup(self, followup_id):
+    def approve_followup(self, followup_id, edits=None):
         """Approve only from pending with quote_verified True.
 
         needs_review raises ValueError (routes -> 400 not_approvable),
@@ -288,12 +331,35 @@ class FollowThroughService:
             raise ValueError("not_approvable: unverified drafts stay under needs_review")
         if status == "pending" and not followup.get("quote_verified"):
             raise ValueError("not_approvable: pending draft has an unverified quote")
+        if status == "approved":
+            return followup  # idempotent: second tap returns the same action
+        # The user's edits from the approval screen win over the model's.
+        changes = {}
+        for key in ("draft", "recipient", "due_at"):
+            value = (edits or {}).get(key)
+            if isinstance(value, str) and value.strip():
+                changes[key] = value.strip()[:4000]
+        if changes.get("due_at") and actions._parse_ts(changes["due_at"]) is None:
+            raise ValueError("not_approvable: due_at must be ISO 8601 with a time zone")
+        merged = dict(followup, **changes)
+        if merged.get("action_type"):
+            changes.update(actions.build_action(merged))
         if hasattr(self.store, "approve_followup"):
             result = self.store.approve_followup(followup_id)
         else:
             followup["status"] = "approved"
             result = followup
-        return {"id": result.get("id", followup_id), "status": "approved"}
+        if changes and hasattr(self.store, "update_followup"):
+            result = self.store.update_followup(followup_id, changes) or result
+        result = dict(result, **changes)
+        result["status"] = "approved"
+        result.setdefault("id", followup_id)
+        return result
+
+    def list_todos(self):
+        """Approved to-dos (and other approved actions) for the to-do list."""
+        return [f for f in (self.store.list_followups() or [])
+                if f.get("status") == "approved" and f.get("action_type") == "todo"]
 
     def dismiss_followup(self, followup_id):
         """Dismiss from any status (mock parity). Unknown id: KeyError."""

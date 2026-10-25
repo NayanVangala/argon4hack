@@ -470,6 +470,12 @@ def create_handler(store, ingest, ask, followthrough, broadcaster=None):
                 return self._send_json(200, {"service": "scene-backend",
                                              "rest": "/api/v1",
                                              "ws": "/api/v1/live"})
+            if method == "GET" and path in ("/dashboard", "/dashboard/"):
+                return self._send_dashboard()
+            if method == "GET" and path == "/api/v1/todos":
+                todos = (self._followthrough.list_todos()
+                         if hasattr(self._followthrough, "list_todos") else [])
+                return self._send_json(200, {"todos": todos})
             if method == "GET" and path == "/api/v1/status":
                 return self._send_json(200, self._status_snapshot())
             if method == "GET" and path == "/api/v1/scenes/today":
@@ -576,6 +582,8 @@ def create_handler(store, ingest, ask, followthrough, broadcaster=None):
                                              "scene_id": scene_id})
             if method == "POST" and path == "/api/v1/people":
                 return self._handle_enroll()
+            if method == "POST" and path == "/api/v1/transcripts":
+                return self._handle_transcript()
             if method == "POST" and path == "/api/v1/followups/generate":
                 body, ok = self._read_json()
                 if not ok:
@@ -592,11 +600,20 @@ def create_handler(store, ingest, ask, followthrough, broadcaster=None):
             m = re.fullmatch(r"/api/v1/followups/([^/]+)/(approve|dismiss)",
                              path)
             if method == "POST" and m:
-                self._read_body()
+                edits, ok = self._read_json()
+                if not ok:
+                    edits = {}
                 fid, action = m.group(1), m.group(2)
                 try:
                     if action == "approve":
-                        result = self._followthrough.approve_followup(fid)
+                        try:
+                            result = self._followthrough.approve_followup(fid, edits)
+                        except TypeError:
+                            result = self._followthrough.approve_followup(fid)
+                        if isinstance(result, dict) and result.get("promise") is not None:
+                            # Full follow-up back so the app can open the
+                            # Mail draft / calendar form it just approved.
+                            return self._send_json(200, dict(result, status="approved"))
                     else:
                         result = self._followthrough.dismiss_followup(fid)
                 except ValueError:
@@ -616,6 +633,68 @@ def create_handler(store, ingest, ask, followthrough, broadcaster=None):
                 return self._send_json(200, {"id": fid, "status": status})
 
             return self._error(404, "not_found", "Unknown route: %s" % path)
+
+        def _send_dashboard(self):
+            page = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                "dashboard.html")
+            try:
+                with open(page, "rb") as fh:
+                    body = fh.read()
+            except OSError:
+                return self._error(404, "not_found", "Dashboard not installed.")
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def _handle_transcript(self):
+            """Test input without glasses: a pasted, speaker-labelled
+            conversation becomes one scene in the live (or today's)
+            session, exactly where follow-through and Ask will read it."""
+            body, ok = self._read_json()
+            if not ok:
+                return self._error(400, "bad_request",
+                                   "Request body must be a JSON object.")
+            lines = body.get("transcript")
+            if not isinstance(lines, list) or not lines or len(lines) > 500:
+                return self._error(400, "bad_request",
+                                   "transcript must be a list of {speaker, text}.")
+            now = now_iso()
+            transcript = []
+            for item in lines:
+                if not isinstance(item, dict) or not str(item.get("text") or "").strip():
+                    return self._error(400, "bad_request",
+                                       "Each line needs speaker and text.")
+                transcript.append({
+                    "speaker": str(item.get("speaker") or "Unknown")[:100],
+                    "text": str(item["text"]).strip()[:4000],
+                    "start_ts": item.get("start_ts") or now,
+                    "end_ts": item.get("end_ts") or now})
+            session_id = body.get("session_id") or self._current_session_id()
+            speakers = sorted({t["speaker"] for t in transcript})
+            scene = {
+                "session_id": session_id,
+                "start_ts": transcript[0]["start_ts"],
+                "end_ts": transcript[-1]["end_ts"],
+                "summary": "Conversation with " + ", ".join(speakers),
+                "quote": transcript[0]["text"],
+                "thumb_url": "", "type": "conversation",
+                "verified": False, "confidence": "review",
+                "objects": [], "people": [{"name": n, "confidence": "review"}
+                                          for n in speakers],
+                "actions": [], "visible_text": [],
+                "critique": [{"check": "source", "result": "pass",
+                              "note": "Typed transcript (test input, not glasses capture)"}],
+                "transcript": transcript, "keyframes": [], "pinned": False,
+                "embedding_refs": None, "source": "typed_transcript"}
+            stored = self._store.add_scene(scene)
+            try:
+                self._broadcaster.broadcast_scene(scene_summary(stored))
+            except Exception:
+                pass
+            return self._send_json(201, {"scene_id": stored.get("id"),
+                                         "session_id": session_id})
 
         def _handle_chunks(self):
             raw = self._read_body()

@@ -482,6 +482,15 @@ class InMemoryStore:
             followup["status"] = "approved"
             return copy.deepcopy(followup)
 
+    def update_followup(self, followup_id, fields):
+        """Merge extra fields (action_url, edited draft...) into a follow-up."""
+        with self._lock:
+            followup = self._followups_by_id.get(followup_id)
+            if followup is None:
+                raise KeyError(followup_id)
+            followup.update(copy.deepcopy(fields or {}))
+            return copy.deepcopy(followup)
+
     def dismiss_followup(self, followup_id):
         """Any status -> dismissed (mock parity)."""
         with self._lock:
