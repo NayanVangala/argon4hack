@@ -65,7 +65,8 @@ xcodebuild -scheme SceneBridge -destination 'generic/platform=iOS'
 ## Team
 
 - **Nayan Vangala**: backend, capture, stage demo.
-- **Isabella Doan**: phone app, lens, Follow-Through Agent, approval screens.
+- **Isabella Doan**: phone app, lens, approval screens.
+- **Srijan Saha**: Follow-Through-Agent, approval system.
 
 ## What is not here yet
 
